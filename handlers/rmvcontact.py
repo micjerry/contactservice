@@ -6,7 +6,9 @@ import logging
 
 import motor
 
-class RmvContactHandler(tornado.web.RequestHandler):
+import basehandler
+
+class RmvContactHandler(basehandler.BaseHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def post(self):
@@ -16,6 +18,12 @@ class RmvContactHandler(tornado.web.RequestHandler):
         contactid = data.get("contactid", "invalid")
 
         logging.info("%s begin to remove %s" % (userid, contactid))
+
+        if self.p_userid != userid:
+            logging.error("forbiden you can not change other user")
+            self.set_status(403)
+            self.finish()
+            return
 
         result = yield coll.find_and_modify(
                            {"id":userid}, 

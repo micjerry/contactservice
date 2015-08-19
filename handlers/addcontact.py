@@ -6,7 +6,9 @@ import logging
 
 import motor
 
-class AddContactHandler(tornado.web.RequestHandler):
+import basehandler
+
+class AddContactHandler(basehandler.BaseHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def post(self):
@@ -23,6 +25,12 @@ class AddContactHandler(tornado.web.RequestHandler):
         comment = data.get("comment", "")
 
         logging.info("begin to handle add contact request, userid = %s contact = %s type = %s nick = %s cnick = %s" % (userid, contactid, contact_type, user_nick, contact_nick))
+
+        if self.p_userid != userid:
+            logging.error("forbiden you can not change other user")
+            self.set_status(403)
+            self.finish()
+            return
 
         #check parameters        
         user = yield coll.find_one({"id":userid})

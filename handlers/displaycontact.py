@@ -1,12 +1,15 @@
 import tornado.web
 import tornado.gen
+import tornado.httpclient
+
 import json
 import io
 import logging
 
 import motor
+import basehandler
 
-class DispayContactHandler(tornado.web.RequestHandler):
+class DispayContactHandler(basehandler.BaseHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def post(self):
@@ -18,31 +21,29 @@ class DispayContactHandler(tornado.web.RequestHandler):
         #begin to logging user
         logging.info("%s begin to display %s" % (userid, contactid))
 
-        result = yield coll.find_one({"id":userid})
+        httpclient = tornado.httpclient.AsyncHTTPClient()
+        url = "http://localhost:9080/cxf/security/contacts/%s" % contactid
+        response = yield httpclient.fetch(url, None, method = "GET", headers = {}, body = None)
+        
+        if response.code != 200:
+            logging.error("get contactinfo failed userid = %s" % userid)
+            self.set_status(401)
+            self.finish()
+            return
 
-        if result:
-            userinfo = {}
-            contacts = result.get("contacts", [])
-            for contact in contacts:
-                if (contact["id"] == contactid):
-                    userinfo["id"] = contact.get("id", "")
-                    userinfo["remark"] = contact.get("remark", "")
-                    userinfo["sign"] = "Dance with wolf"
-                    userinfo["nickname"] = contact.get("nickname", "")
-                    userinfo["sex"] = "man"
-                    userinfo["type"] = contact.get("type", "person")
-                    break
+        res_body = {}
+        try:
+            res_body = json.loads(response.body.decode("utf-8"))
+        except Exception as e:
+            logging.error("invalid body received")
+            self.send_error(401)
+            return
 
-            if userinfo:
-                self.write(userinfo)
-            else:
-                logging.error("contact %s was not found" % contactid)
-                self.set_status(404)
-                self.finish()
-                return
-        else:
-            logging.error("user %s was not found" % userid)
-            self.set_status(404)
-            self.write({"error":"not found"});
+        userinfo = {}
+        userinfo["id"] = contactid
+        userinfo["remark"] = res_body.get("commName", "")
+        userinfo["contactInfos"] = res_body.get("contactInfos", [])
+
+        self.write(userinfo)
 
         self.finish()

@@ -6,7 +6,9 @@ import logging
 
 import motor
 
-class MarkContactHandler(tornado.web.RequestHandler):
+import basehandler
+
+class MarkContactHandler(basehandler.BaseHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def post(self):
@@ -17,6 +19,12 @@ class MarkContactHandler(tornado.web.RequestHandler):
         remark = data.get("remark", "")
 
         logging.info("user %s begin to mark contact %s as %s" % (userid, contactid, remark))
+        
+        if self.p_userid != userid:
+            logging.error("forbiden you can not change other user")
+            self.set_status(403)
+            self.finish()
+            return
 
         result = yield coll.find_one({"id":userid})
         if result:
