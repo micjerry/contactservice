@@ -39,9 +39,20 @@ class DispayContactHandler(basehandler.BaseHandler):
             self.send_error(401)
             return
 
+        #get remark
+        remark = ""
+        result = yield coll.find_one({"id":userid})
+        if result:
+            contacts = result.get("contacts", [])
+            for contact in contacts:
+                if (contact.get("id", "") == contactid):
+                   remark =  contact.get("remark", "")
+                   break
+ 
         userinfo = {}
         userinfo["id"] = contactid
-        userinfo["remark"] = res_body.get("commName", "")
+        userinfo["remark"] = remark
+        userinfo["nickname"] = res_body.get("commName", "")
         userinfo["contactInfos"] = res_body.get("contactInfos", [])
 
         self.write(userinfo)

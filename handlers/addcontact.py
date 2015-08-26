@@ -19,7 +19,7 @@ class AddContactHandler(basehandler.BaseHandler):
         data = json.loads(self.request.body.decode("utf-8"))
         userid = data.get("id", "invalid")
         contactid = data.get("contactid", "invalid")
-        contact_type = data.get("type", "person")
+        contact_type = data.get("type", "PERSON").upper()
         user_nick = data.get("nickname", "")
         contact_nick = data.get("contactnick", "")
         comment = data.get("comment", "")
@@ -32,53 +32,61 @@ class AddContactHandler(basehandler.BaseHandler):
             self.finish()
             return
 
+        if contactid == userid:
+           logging.error("add your self?")
+           self.set_status(403)
+           self.finish()
+           return
+
         #check parameters        
         user = yield coll.find_one({"id":userid})
         contact = yield coll.find_one({"id":contactid})
-        if (user and contact):
+        if user:
 
-            # notify 
+            # notify send to contact
             notify = {
               "name": "mx.contact.add_contact",
               "userid": userid,
-              "comment": comment
+              "comment": comment,
+              "nickname": user_nick
             }
 
+            # response body
+            body = {}
+
             # check is repeat add
-            already_add = 0
             contacts = user.get("contacts", [])
             appendings = user.get("appendings", [])
 
             for friend in contacts:
                 if (friend["id"] == contactid):
                     logging.info("user = %s was already a friend" % contactid)
-                    already_add = 1
-                    break
+                    self.finish()
+                    return
 
             for appending in appendings:
                 if (appending["id"] == contactid):
                     logging.info("user = %s was already a pending friend" % contactid)
-                    already_add = 1
                     #notify contact again, Hi guy, accept my friendship
                     publish.publish_one(contactid, notify)
-                    break
+                    self.finish()
+                    return
 
-            if already_add:
-                # already added do nothing
+            # device just save 
+            if contact_type == "DEVICE":
+                # just add, no notify
+                yield coll.find_and_modify({"id":userid}, {"$push":{"contacts":{"id":contactid, "type":contact_type, "nickname": contact_nick}}})
+                body["desc"] = "ok"
+                self.write(body)
                 self.finish()
                 return
             else:
-                # device just save 
-                if contact_type == "device":
-                    # just add, no notify
-                    yield coll.find_and_modify({"id":userid}, {"$push":{"contacts":{"id":contactid, "type":contact_type, "nickname": contact_nick}}})
-                    self.finish()
-                    return
-                else:
-                    contact_type = "person"
+                contact_type = "PERSON"
                 
-                # is user  already added by the contact
-                already_added_by_friend = 0
+            # is user  already added by the contact
+            already_added_by_friend = 0
+
+            if contact:
                 friend_contacts = contact.get("contacts", [])
                 friend_appendings = contact.get("appendings", [])
 
@@ -99,20 +107,25 @@ class AddContactHandler(basehandler.BaseHandler):
                             yield coll.find_and_modify({"id":contactid}, {"$push":{"contacts":{"id":userid, "nickname":user_nick, "type":contact_type}}})
                             break                
 
-                # begin to add friend
-                if already_added_by_friend:
-                    #just add to contact
-                    yield coll.find_and_modify({"id":userid}, {"$push":{"contacts":{"id":contactid, "nickname":contact_nick, "type":contact_type}}})
-                else:
-                    #add to appendings, need to be agree by friend
-                    yield coll.find_and_modify({"id":userid}, {"$push":{"appendings":{"id":contactid, "nickname":contact_nick}}})
-
+            # begin to add friend
+            if already_added_by_friend:
+                #just add to contact
+                notify["desc"] = "ok"
+                body["desc"] = "ok"   
+                yield coll.find_and_modify({"id":userid}, {"$push":{"contacts":{"id":contactid, "nickname":contact_nick, "type":contact_type}}})
+            else:
+                notify["desc"] = "auth required"
+                body["desc"] = "auth required"
+                #add to appendings, need to be agree by friend
+                yield coll.find_and_modify({"id":userid}, {"$push":{"appendings":{"id":contactid, "nickname":contact_nick}}})
 
             # notify the user who was added as a friend
             publish.publish_one(contactid, notify)
+            self.write(body)
+            self.finish()
         else:
             logging.error("invalid userid = %s , contact = %s" % (userid, contactid))
             self.set_status(404)
             self.write({"error":"not found"});
+            self.finish()
 
-        self.finish()

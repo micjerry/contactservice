@@ -23,7 +23,7 @@ class BaseHandler(tornado.web.RequestHandler):
         logging.info("request receive with auth = %s" % token)
         if not token:
             logging.error("no token was found")
-            self.send_error(401)
+            self.send_error(502)
             return
         else:
             user = r.get(token)
@@ -40,7 +40,7 @@ class BaseHandler(tornado.web.RequestHandler):
 
                 if response.code != 200:
                     logging.error("get userinfo %d received session = %s" % (response.code, token))
-                    self.send_error(401)
+                    self.send_error(502)
                     return
 
                 res_body = {}
@@ -48,17 +48,18 @@ class BaseHandler(tornado.web.RequestHandler):
                     res_body = json.loads(response.body.decode("utf-8"))
                 except Exception as e:
                     logging.error("invalid body received")
-                    self.send_error(401)
+                    self.send_error(502)
                     return
 
                 nickname = res_body.get("commName", "")
                 sign = res_body.get("sign", "")
                 self.p_userid = str(res_body.get("userID", ""))	
+                name = res_body.get("name", "")
 
                 logging.info("get auth userid = %s nickname = %s sign = %s" % (self.p_userid, nickname, sign))
                 if not self.p_userid:
                     logging.error("get userid failed session = %s" % token)
-                    self.send_error(401)
+                    self.send_error(502)
                     return
 
                 #cach token
@@ -71,7 +72,8 @@ class BaseHandler(tornado.web.RequestHandler):
                     {"$set":
                         {
                           "nickname":nickname,
-                          "sign":sign
+                          "sign":sign,
+                          "name":name
                         }
                     },
                     True
