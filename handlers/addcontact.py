@@ -73,7 +73,7 @@ class AddContactHandler(basehandler.BaseHandler):
                     return
 
             # device just save 
-            if contact_type == "DEVICE":
+            if contact_type == "TERMINAL":
                 # just add, no notify
                 yield coll.find_and_modify({"id":userid}, {"$push":{"contacts":{"id":contactid, "type":contact_type, "nickname": contact_nick}}})
                 body["desc"] = "ok"
