@@ -31,7 +31,7 @@ def start():
         print("%s was already started, pid = %s" % (appname_print, ps_id))
         return
     else:
-        os.popen("python %s & >/dev/null 2>&1" % appname)
+        os.popen("nohup python %s & >/dev/null 2>&1" % appname)
         print("%s started" % appname_print)
 
 def stop():
