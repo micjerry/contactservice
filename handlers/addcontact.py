@@ -5,10 +5,16 @@ import io
 import logging
 
 import motor
+import uuid
 
-import basehandler
+from mickey.basehandler import BaseHandler
 
-class AddContactHandler(basehandler.BaseHandler):
+class AddContactHandler(BaseHandler):
+    USERTYPE_PERSON    = "PERSON"
+    USERTYPE_TERMINAL  = "TERMINAL"
+    ADDTYPE_OK         = "ok"
+    ADDTYPE_AUTH       = "auth required"
+
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def post(self):
@@ -16,13 +22,15 @@ class AddContactHandler(basehandler.BaseHandler):
         publish = self.application.publish
 
         #get parameters of request
-        data = json.loads(self.request.body.decode("utf-8"))
-        userid = data.get("id", "invalid")
-        contactid = data.get("contactid", "invalid")
-        contact_type = data.get("type", "PERSON").upper()
-        user_nick = data.get("nickname", "")
+        data         = json.loads(self.request.body.decode("utf-8"))
+        userid       = data.get("id", "invalid")
+        contactid    = data.get("contactid", "invalid")
+        usertype     = data.get("usertype", self.USERTYPE_PERSON).upper()
+        contact_type = data.get("type", self.USERTYPE_TERMINAL).upper()
+        user_nick    = data.get("nickname", "")
         contact_nick = data.get("contactnick", "")
-        comment = data.get("comment", "")
+        comment      = data.get("comment", "")
+        change_flag  = str(uuid.uuid4()).replace('-', '_')
 
         logging.info("begin to handle add contact request, userid = %s contact = %s type = %s nick = %s cnick = %s" % (userid, contactid, contact_type, user_nick, contact_nick))
 
@@ -33,10 +41,14 @@ class AddContactHandler(basehandler.BaseHandler):
             return
 
         if contactid == userid:
-           logging.error("add your self?")
-           self.set_status(403)
-           self.finish()
-           return
+            logging.error("add your self?")
+            self.set_status(403)
+            self.finish()
+            return
+
+        if contact_type != self.USERTYPE_TERMINAL and contact_type != self.USERTYPE_PERSON:
+            logging.error("invalid contact type")
+            return
 
         #check parameters        
         user = yield coll.find_one({"id":userid})
@@ -48,7 +60,8 @@ class AddContactHandler(basehandler.BaseHandler):
               "name": "mx.contact.add_contact",
               "userid": userid,
               "comment": comment,
-              "nickname": user_nick
+              "nickname": user_nick,
+              "usertype": usertype
             }
 
             # response body
@@ -58,66 +71,47 @@ class AddContactHandler(basehandler.BaseHandler):
             contacts = user.get("contacts", [])
             appendings = user.get("appendings", [])
 
-            for friend in contacts:
-                if (friend["id"] == contactid):
-                    logging.info("user = %s was already a friend" % contactid)
-                    self.finish()
-                    return
-
-            for appending in appendings:
-                if (appending["id"] == contactid):
-                    logging.info("user = %s was already a pending friend" % contactid)
-                    #notify contact again, Hi guy, accept my friendship
-                    publish.publish_one(contactid, notify)
-                    self.finish()
-                    return
-
-            # device just save 
-            if contact_type == "TERMINAL":
-                # just add, no notify
-                yield coll.find_and_modify({"id":userid}, {"$push":{"contacts":{"id":contactid, "type":contact_type, "nickname": contact_nick}}})
-                body["desc"] = "ok"
-                self.write(body)
+            if contactid in [x.get("id", "") for x in user.get("contacts", [])]:
+                logging.info("user = %s was already a friend" % contactid)
                 self.finish()
                 return
-            else:
-                contact_type = "PERSON"
+
+            #if already add the contact, but reply was not received, notify contact again, Hi guy, accept my friendship
+            if contactid in [x.get("id", "") for x in user.get("appendings", [])]:
+                logging.info("user = %s was already a pending friend" % contactid)
+                publish.publish_one(contactid, notify)
+                self.finish()
+                return
                 
-            # is user  already added by the contact
+            # check the friendship, is user already added by the contact
             already_added_by_friend = 0
 
             if contact:
-                friend_contacts = contact.get("contacts", [])
-                friend_appendings = contact.get("appendings", [])
-
-                for befriend in friend_contacts:
-                    if (befriend["id"] == userid):
-                        logging.info("%s was already added by %s" % (userid, contactid))
-                        already_added_by_friend = 1
-                        break
-
-                if not already_added_by_friend:
-                    # check appendings
-                    for beappending in friend_appendings:
-                        if (beappending["id"] == userid): 
-                            logging.info("%s was already invited by %s" % (userid, contactid))
-                            already_added_by_friend = 1
-                            #move userid appendings to contacts
-                            yield coll.find_and_modify({"id":contactid}, {"$pull":{"appendings":{"id":userid}}})
-                            yield coll.find_and_modify({"id":contactid}, {"$push":{"contacts":{"id":userid, "nickname":user_nick, "type":contact_type}}})
-                            break                
+                if userid in [x.get("id", "") for x in contact.get("contacts", [])]:
+                    logging.info("%s was already added by %s" % (userid, contactid))
+                    already_added_by_friend = 1
+                elif userid in [x.get("id", "") for x in contact.get("appendings", [])]:
+                    logging.info("%s was already invited by %s" % (userid, contactid))
+                    already_added_by_friend = 1
+                    yield coll.find_and_modify({"id":contactid}, {"$pull":{"appendings":{"id":userid}}})
+                    yield coll.find_and_modify({"id":contactid}, {"$push":{"contacts":{"id":userid, "nickname":user_nick, "type":contact_type}}})
+                    yield coll.find_and_modify({"id":contactid},{"$set": {"flag":change_flag}})
+                else:
+                    pass
 
             # begin to add friend
-            if already_added_by_friend:
+            if already_added_by_friend or contact_type == self.USERTYPE_TERMINAL:
                 #just add to contact
-                notify["desc"] = "ok"
-                body["desc"] = "ok"   
+                notify["desc"] = self.ADDTYPE_OK
+                body["desc"] = self.ADDTYPE_OK
                 yield coll.find_and_modify({"id":userid}, {"$push":{"contacts":{"id":contactid, "nickname":contact_nick, "type":contact_type}}})
             else:
-                notify["desc"] = "auth required"
-                body["desc"] = "auth required"
-                #add to appendings, need to be agree by friend
+                notify["desc"] = self.ADDTYPE_AUTH
+                body["desc"] = self.ADDTYPE_AUTH
                 yield coll.find_and_modify({"id":userid}, {"$push":{"appendings":{"id":contactid, "nickname":contact_nick}}})
+
+            #set change flag
+            yield coll.find_and_modify({"id":userid},{"$set": {"flag":change_flag}})
 
             # notify the user who was added as a friend
             publish.publish_one(contactid, notify)

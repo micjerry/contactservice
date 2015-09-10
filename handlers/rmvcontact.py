@@ -5,10 +5,11 @@ import io
 import logging
 
 import motor
+import uuid
 
-import basehandler
+from mickey.basehandler import BaseHandler
 
-class RmvContactHandler(basehandler.BaseHandler):
+class RmvContactHandler(BaseHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def post(self):
@@ -16,6 +17,7 @@ class RmvContactHandler(basehandler.BaseHandler):
         data = json.loads(self.request.body.decode("utf-8"))
         userid = data.get("id", "invalid")
         contactid = data.get("contactid", "invalid")
+        flag = str(uuid.uuid4()).replace('-', '_')
 
         logging.info("%s begin to remove %s" % (userid, contactid))
 
@@ -29,10 +31,14 @@ class RmvContactHandler(basehandler.BaseHandler):
                            {"id":userid}, 
                            {"$pull":{"contacts":{"id":contactid}}}
                        )
+
         append_result = yield coll.find_and_modify(
                            {"id":userid},
                            {"$pull":{"appendings":{"id":contactid}}}
                        )
+
+        yield coll.find_and_modify({"id":userid}, {"$set": {"flag" : flag}})
+
         if result:
             self.set_status(200)
         else:

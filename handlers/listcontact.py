@@ -5,16 +5,20 @@ import io
 import logging
 
 import motor
+import uuid
 
-import basehandler
+import mickey.userfetcher
+from mickey.basehandler import BaseHandler
 
-class ListContactHandler(basehandler.BaseHandler):
+class ListContactHandler(BaseHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def post(self):
         coll = self.application.db.users
         data = json.loads(self.request.body.decode("utf-8"))
         userid = data.get("id", "invalid")
+        client_flag = data.get("flag", "")
+        server_flag = None
 
         logging.info("list contact for %s" % userid)
 
@@ -26,6 +30,12 @@ class ListContactHandler(basehandler.BaseHandler):
 
         user = yield coll.find_one({"id":userid})
         if user:
+            server_flag = user.get("flag", "")
+            if client_flag and client_flag == server_flag:
+                self.set_status(304)
+                self.finish()
+                return
+
             contacts = user.get("contacts", [])
             appends = user.get("appendings", [])
 
@@ -36,14 +46,14 @@ class ListContactHandler(basehandler.BaseHandler):
                 contact["id"] = c_id
                 contact["remark"] = item.get("remark", "")
                 contact["type"] = item.get("type", "")
-                contact_db = yield coll.find_one({"id":c_id})
-                if contact_db:
-                    contact["nickname"] = contact_db.get("nickname", "")
-                    contact["sign"] = contact_db.get("sign", "")
-
+                c_userinfo = yield mickey.userfetcher.getcontact(c_id)
+                if c_userinfo:
+                    contact["nickname"] = c_userinfo.get("commName", "")
+                    contact["sign"] = c_userinfo.get("sign", "")
+                    
                 rs_contacts.append(contact)
 
-            self.write({"contacts": rs_contacts,"appendings":appends});
+            self.write({"contacts": rs_contacts,"appendings":appends, "flag": server_flag})
 
         else:
             logging.error("user %s was not found" % userid)

@@ -5,10 +5,10 @@ import io
 import logging
 
 import motor
+import uuid
+from mickey.basehandler import BaseHandler
 
-import basehandler
-
-class MarkContactHandler(basehandler.BaseHandler):
+class MarkContactHandler(BaseHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def post(self):
@@ -17,6 +17,7 @@ class MarkContactHandler(basehandler.BaseHandler):
         userid = data.get("id", "invalid")
         contactid = data.get("contactid", "invalid")
         remark = data.get("remark", "")
+        flag = str(uuid.uuid4()).replace('-', '_')
 
         logging.info("user %s begin to mark contact %s as %s" % (userid, contactid, remark))
         
@@ -38,7 +39,8 @@ class MarkContactHandler(basehandler.BaseHandler):
                            {"id":userid},
                            {"$set":
                               {
-                               "contacts":contacts
+                               "contacts" : contacts,
+                               "flag" : flag
                               }
                            }
                        )
