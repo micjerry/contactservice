@@ -6,21 +6,30 @@ from mickey.subconnection import SubConnection
 
 class PikaConsumer(object):
 
-    EXCHANGE = 'user'
-    EXCHANGE_TYPE = 'direct'
-
-    def __init__(self, userid):
+    def __init__(self, userid, pubsub, **routing):
         self._userid = userid
         
         #websocket connection
         self._closing = False
-        self._pubsub = None
+        self._pubsub = pubsub
         self._pikaclient = None
         self._channel = None
         self._consumers = []
 
+        self._exchange       = routing.get("exchange", None)
+        self._exchangetype   = routing.get("exchange_type", None)
+        self._expire         = routing.get("expire", None)
+        self._queuename      = routing.get("queuename", None)
+        self._routings       = routing.get("routings", [])
+        self._tmp_queuename  = routing.get("tmp_queuename", None)
+        self._tmp_routings   = routing.get("tmp_routings", [])
+
     def start(self):
         logging.debug("start consumer %s " % self._userid)
+
+        if not self._exchange or not self._exchangetype:
+            logging.error("exchange name or exchange type missed")
+            return
 
         # get one rabbitmq connection
         self._pikaclient = SubConnectionMgr.connection()
@@ -58,8 +67,8 @@ class PikaConsumer(object):
         self._channel.add_on_close_callback(self.on_channel_closed)
         self._channel.add_on_cancel_callback(self.on_consumer_cancelled)
         try:
-            self._channel.exchange_declare(exchange = self.EXCHANGE,
-                                          exchange_type = self.EXCHANGE_TYPE,
+            self._channel.exchange_declare(exchange = self._exchange,
+                                          exchange_type = self._exchangetype,
                                           auto_delete = False,
                                           durable = False,
                                           callback = self.on_exchange_declared)
@@ -70,16 +79,16 @@ class PikaConsumer(object):
         logging.debug("begin on_exchange_declared %s" % self._userid)
         try:
             #declare queue
-            if self._pubsub._queuename:
+            if self._queuename:
                 self._channel.queue_declare(auto_delete = False,
-                                            queue = self._pubsub._queuename,
+                                            ueue = self._queuename,
                                             durable = False,
                                             exclusive = False,
                                             callback = self.on_queue_declared)
             #declare temp queue
-            if self._pubsub._tmp_queuename:
+            if self._tmp_queuename:
                 self._channel.queue_declare(auto_delete = False,
-                                            queue = self._pubsub._tmp_queuename,
+                                            queue = self._tmp_queuename,
                                             durable = False,
                                             exclusive = True,
                                             callback = self.on_tmp_queue_declared)
@@ -88,11 +97,11 @@ class PikaConsumer(object):
 
     def on_queue_declared(self, frame):
         logging.debug("begin on_queue_declared %s" % self._userid)
-        for item in self._pubsub._routings:
+        for item in self._routings:
             try:
                 logging.info("bind %s" % item)
-                self._channel.queue_bind(exchange = self.EXCHANGE,
-                                         queue = self._pubsub._queuename,
+                self._channel.queue_bind(exchange = self._exchange,
+                                         queue = self._queuename,
                                          routing_key = item,
                                          callback = self.on_queue_bound)
             except Exception as e:
@@ -102,19 +111,20 @@ class PikaConsumer(object):
         logging.debug("begin on_queue_bound %s" % self._userid)
         try:
             consumer = self._channel.basic_consume(consumer_callback = self.on_pika_message,
-                                                   queue = self._pubsub._queuename,
+                                                   queue = self._queuename,
                                                    no_ack = True)
             self._consumers.append(consumer)
+            self._pubsub.connected()
         except Exception as e:
             logging.error("cosume error {0}".format(e))
 
     def on_tmp_queue_declared(self, frame):
         logging.debug("begin on_tmp_queue_declared %s" % self._userid)
-        for item in self._pubsub._tmp_routings:
+        for item in self._tmp_routings:
             try:
                 logging.info("bind %s" % item)
-                self._channel.queue_bind(exchange = self.EXCHANGE,
-                                        queue = self._pubsub._tmp_queuename,
+                self._channel.queue_bind(exchange = self._exchange,
+                                        queue = self._tmp_queuename,
                                         routing_key = item,
                                         callback = self.on_tmp_queue_bound)
             except Exception as e:
@@ -124,9 +134,10 @@ class PikaConsumer(object):
         logging.debug("begin on_tmp_queue_bound %s" % self._userid)
         try:
             consumer = self._channel.basic_consume(consumer_callback = self.on_tmp_pika_message,
-                                                   queue = self._pubsub._tmp_queuename,
+                                                   queue = self._tmp_queuename,
                                                    no_ack = True)
             self._consumers.append(consumer)
+            self._pubsub.connected()
         except Exception as e:
             logging.error("cosume error {0}".format(e))
 

@@ -1,5 +1,8 @@
 import os
 import sys
+
+sys.path.append('/opt/webapps/libs')
+
 import tornado.httpserver
 import tornado.ioloop
 import tornado.web

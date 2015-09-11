@@ -5,17 +5,24 @@ import redis
 import json
 
 import motor
+from redis.sentinel import Sentinel
 
-r = redis.StrictRedis(host='localhost', port=6379, db=0, socket_timeout=5.0)
+sentinel = Sentinel([('localhost', 26379)], socket_timeout=1)
 db = motor.MotorClient("mongodb://localhost:27017").contact
 
 @tornado.gen.coroutine
 def getuser(token):
-    user = r.get(token)
+    user = None
     userid = None
+    try:
+        slave = sentinel.slave_for('master', socket_timeout=0.5)
+        user = slave.get(token)
+    except Exception as e:
+        logging.error("can not get cached information {0}".format(e))
+
     if not user:
         httpclient = tornado.httpclient.AsyncHTTPClient()
-        url = "http://localhost:9080/cxf/security/tokens;jsessionid=%s" % token
+        url = "http://localhost:8900/cxf/security/tokens?jsessionid=%s" % token
         session = "JSESSIONID=%s" % token
         ath_headers = {
           "Cookie" : session
@@ -41,8 +48,13 @@ def getuser(token):
 
         logging.info("get user id success token = %s id = %s" % (token, userid))
         #cach token
-        r.set(token, userid)
-        r.expire(token, 3600)
+        try:
+            master = sentinel.master_for('master', socket_timeout=0.1)
+            master.set(token, userid)
+            master.expire(token, 3600)
+        except Exception as e:
+            logging.error("can not cach user information {0}".format(e))
+
     else:
         userid = user.decode("utf-8") 
         
