@@ -1,0 +1,126 @@
+#!/bin/bash
+
+# contact server - Startup script for contact server
+# chkconfig: 35 90 10
+# description: contact server.
+# processname: contact
+# config: 
+# pidfile: app_contact.pid
+
+### BEGIN INIT INFO
+# Provides: contact-server
+# Required-Start: $local_fs $remote_fs $network
+# Required-Stop: $local_fs $remote_fs $network
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: start and stop contact
+### END INIT INFO
+
+
+. /etc/rc.d/init.d/functions
+
+SERVER_NAME="Contact-Server"
+SERVER_CMD="/root/.pyenv/versions/3.4.3/bin/python"
+SERVER_PTH="/opt/webapps/contact"
+SERVER_OPT="app_contact.py"
+SERVER_OPT_START="${SERVER_OPT} start"
+SERVER_OPT_STOP="${SERVER_OPT} stop"
+SERVER_PID="/var/run/app_contact.pid"
+
+
+die()
+{
+  echo $1
+  exit 1
+}
+
+
+usage() 
+{
+  echo "Usage: $0 {start|stop|restart|status}"
+  exit 0
+}
+
+[ -f ${SERVER_CMD} ] || die "Python 3.4 does not exist"
+[ -d ${SERVER_PTH} ] || die "${SERVER_PTH} does not exist"
+
+start_service()
+{
+  if [ ! -f ${SERVER_PID} ]; then
+    cd ${SERVER_PTH}
+    rs=`$SERVER_CMD $SERVER_OPT_START`
+    cd - >/dev/null 2>&1
+  else
+    echo $"${SERVER_NAME} already running"
+  fi
+}
+
+stop_service()
+{
+  if [ -f ${SERVER_PID} ]; then
+    cd ${SERVER_PTH} 
+    rs=`$SERVER_CMD $SERVER_OPT_STOP`
+    cd - >/dev/null 2>&1
+    usleep 10000
+  else
+    return 0
+  fi
+
+  if [ -f ${SERVER_PID} ]; then
+    killproc -p $SERVER_PID -d 300 -TERM $SERVER_CMD
+    RETVAL=$?
+    [ $RETVAL -eq 0 ] && rm -f $SERVER_PID
+  fi
+}
+
+status_service()
+{
+  if [ -f ${SERVER_PID} ]; then
+    echo $"${SERVER_NAME} is running"
+  else
+    echo $"${SERVER_NAME} is not running"
+  fi
+}
+
+if [ $# != 1 ]; then
+  usage
+fi
+
+start()
+{
+  echo $"Starting ${SERVER_NAME}"
+  start_service
+  echo $"${SERVER_NAME} started"
+}
+
+stop()
+{
+  echo $"Stopping ${SERVER_NAME}"
+  stop_service
+  echo $"${SERVER_NAME} stopped"
+}
+
+status()
+{
+  status_service
+}
+
+case "$1" in
+  start)
+    start
+    ;;
+  stop)
+    stop
+    ;;
+  restart)
+    stop
+    start
+    ;;
+  status)
+    status
+    ;;
+  * )
+    usage
+    ;;
+esac
+
