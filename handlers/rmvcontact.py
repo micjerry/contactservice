@@ -27,22 +27,18 @@ class RmvContactHandler(BaseHandler):
             self.finish()
             return
 
-        result = yield coll.find_and_modify(
-                           {"id":userid}, 
-                           {"$pull":{"contacts":{"id":contactid}}}
-                       )
+        result = yield coll.find_and_modify({"id":userid}, 
+                                            {
+                                              "$pull":{"contacts":{"id":contactid}},
+                                              "$pull":{"appendings":{"id":contactid}},
+                                              "$set": {"flag" : flag}
+                                            })
 
-        append_result = yield coll.find_and_modify(
-                           {"id":userid},
-                           {"$pull":{"appendings":{"id":contactid}}}
-                       )
-
-        yield coll.find_and_modify({"id":userid}, {"$set": {"flag" : flag}})
 
         if result:
             self.set_status(200)
         else:
-            logging.info("mark failed")
+            logging.info("remove failed")
             self.set_status(404)
             self.write({"error":"not found"});
 

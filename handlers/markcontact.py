@@ -30,20 +30,23 @@ class MarkContactHandler(BaseHandler):
         result = yield coll.find_one({"id":userid})
         if result:
             contacts = result.get("contacts", [])
+            contact_found = False
             for contact in contacts:
                 if (contact.get("id", "") == contactid):
                     contact["remark"] = remark
+                    contact_found = True
                     break
 
-            modresult = yield coll.find_and_modify(
-                           {"id":userid},
-                           {"$set":
-                              {
-                               "contacts" : contacts,
-                               "flag" : flag
-                              }
-                           }
-                       )
+            if contact_found:
+                modresult = yield coll.find_and_modify(
+                               {"id":userid},
+                               {"$set":
+                                  {
+                                   "contacts" : contacts,
+                                   "flag" : flag
+                                  }
+                               }
+                           )
             if modresult:
                 self.set_status(200)
             else:

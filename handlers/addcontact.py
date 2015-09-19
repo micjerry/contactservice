@@ -26,7 +26,7 @@ class AddContactHandler(BaseHandler):
         userid       = data.get("id", "invalid")
         contactid    = data.get("contactid", "invalid")
         usertype     = data.get("usertype", self.USERTYPE_PERSON).upper()
-        contact_type = data.get("type", self.USERTYPE_TERMINAL).upper()
+        contact_type = data.get("type", self.USERTYPE_PERSON).upper()
         user_nick    = data.get("nickname", "")
         contact_nick = data.get("contactnick", "")
         comment      = data.get("comment", "")
@@ -93,9 +93,13 @@ class AddContactHandler(BaseHandler):
                 elif userid in [x.get("id", "") for x in contact.get("appendings", [])]:
                     logging.info("%s was already invited by %s" % (userid, contactid))
                     already_added_by_friend = 1
-                    yield coll.find_and_modify({"id":contactid}, {"$pull":{"appendings":{"id":userid}}})
-                    yield coll.find_and_modify({"id":contactid}, {"$push":{"contacts":{"id":userid, "nickname":user_nick, "type":contact_type}}})
-                    yield coll.find_and_modify({"id":contactid},{"$set": {"flag":change_flag}})
+                    yield coll.find_and_modify({"id":contactid}, 
+                                               {
+                                                 "$pull":{"appendings":{"id":userid}},
+                                                 "$push":{"contacts":{"id":userid, "nickname":user_nick, "type":contact_type}},
+                                                 "$set": {"flag":change_flag},
+                                                 "$unset": {"garbage": 1}
+                                               })
                 else:
                     pass
 
@@ -104,14 +108,21 @@ class AddContactHandler(BaseHandler):
                 #just add to contact
                 notify["desc"] = self.ADDTYPE_OK
                 body["desc"] = self.ADDTYPE_OK
-                yield coll.find_and_modify({"id":userid}, {"$push":{"contacts":{"id":contactid, "nickname":contact_nick, "type":contact_type}}})
+                yield coll.find_and_modify({"id":userid}, 
+                                           {
+                                             "$push":{"contacts":{"id":contactid, "nickname":contact_nick, "type":contact_type}}, 
+                                             "$set": {"flag":change_flag},
+                                             "$unset": {"garbage": 1}
+                                           })
             else:
                 notify["desc"] = self.ADDTYPE_AUTH
                 body["desc"] = self.ADDTYPE_AUTH
-                yield coll.find_and_modify({"id":userid}, {"$push":{"appendings":{"id":contactid, "nickname":contact_nick}}})
-
-            #set change flag
-            yield coll.find_and_modify({"id":userid},{"$set": {"flag":change_flag}})
+                yield coll.find_and_modify({"id":userid}, 
+                                           {
+                                             "$push":{"appendings":{"id":contactid, "nickname":contact_nick}}, 
+                                             "$set": {"flag":change_flag}, 
+                                             "$unset": {"garbage": 1}
+                                           })
 
             # notify the user who was added as a friend
             publish.publish_one(contactid, notify)
