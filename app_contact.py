@@ -25,6 +25,10 @@ import mickey.publish
 
 from tornado.options import define, options
 define("port", default=8000, help="run on the given port", type=int)
+define("cmd", default="run", help="Command")
+define("conf", default="/etc/mx_apps/app_contact/app_contact_is1.conf", help="Server config")
+define("pidfile", default="/var/run/app_contact_is1.pid", help="Pid file")
+define("logfile", default="/var/log/app_contact_is1", help="Log file")
 
 class Application(tornado.web.Application):
     def __init__(self):
@@ -40,8 +44,7 @@ class Application(tornado.web.Application):
  
 class MickeyDamon(Daemon):
     def run(self):
-        tornado.options.parse_command_line()
-        mickey.logutil.setuplog()
+        mickey.logutil.setuplog(options.logfile)
         http_server = tornado.httpserver.HTTPServer(Application())
         http_server.listen(options.port)
         tornado.ioloop.IOLoop.instance().start()
@@ -51,19 +54,17 @@ class MickeyDamon(Daemon):
 
 
 def micmain():
-    if len(sys.argv) < 2:
-        print("invalid command")
-        return
+    tornado.options.parse_command_line()
+    tornado.options.parse_config_file(options.conf)
 
-    pid_file_name = "/var/run/" + sys.argv[0].replace(".py", ".pid")
-    miceydamon = MickeyDamon(pid_file_name)
+    miceydamon = MickeyDamon(options.pidfile)
     handler = {}
     handler["start"] = miceydamon.start
     handler["stop"] = miceydamon.stop
     handler["restart"] = miceydamon.restart
     handler["run"] = miceydamon.run
 
-    return handler.get(sys.argv[1],miceydamon.errorcmd)()
+    return handler.get(options.cmd, miceydamon.errorcmd)()
 
 if __name__ == "__main__":
     micmain()    
