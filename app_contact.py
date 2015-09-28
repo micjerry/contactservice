@@ -13,7 +13,7 @@ import logging.handlers
 
 import motor
 from mickey.daemon import Daemon
-from mickey.mongocon import mongo_url
+import mickey.commonconf
 import mickey.logutil
 
 from handlers.listcontact import ListContactHandler
@@ -39,7 +39,7 @@ class Application(tornado.web.Application):
                   (r"/contact/remove/friend", RmvContactHandler),
                   (r"/contact/mod/remark", MarkContactHandler)
                  ]
-        self.db = motor.MotorClient(mongo_url).contact
+        self.db = motor.MotorClient(options.mongo_url).contact
         self.publish = mickey.publish
         tornado.web.Application.__init__(self, handlers, debug=True)
  
@@ -47,7 +47,7 @@ class MickeyDamon(Daemon):
     def run(self):
         mickey.logutil.setuplog(options.logfile)
         http_server = tornado.httpserver.HTTPServer(Application())
-        http_server.listen(options.port)
+        http_server.listen(options.port, options.local_server)
         tornado.ioloop.IOLoop.instance().start()
 
     def errorcmd(self):

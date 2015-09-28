@@ -61,7 +61,9 @@ class AddContactHandler(BaseHandler):
               "userid": userid,
               "comment": comment,
               "nickname": user_nick,
-              "usertype": usertype
+              "usertype": usertype,
+              "nty_type": "device",
+              "msg_type": "other"
             }
 
             # response body
