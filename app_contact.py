@@ -24,6 +24,7 @@ from handlers.markcontact import MarkContactHandler
 from handlers.fetchdevice import FetchDeviceHandler
 from handlers.listdevices import ListDeviceHandler
 from handlers.transferdevice import TransferDeviceHandler
+from handlers.displaycomb import DisplayCombHandler
 
 import mickey.publish
 
@@ -43,7 +44,8 @@ class Application(tornado.web.Application):
                   (r"/contact/mod/remark", MarkContactHandler),
                   (r"/contact/fetch/devices", FetchDeviceHandler),
                   (r"/contact/list/devices", ListDeviceHandler),
-                  (r"/contact/transfer/device", TransferDeviceHandler)
+                  (r"/contact/transfer/device", TransferDeviceHandler),
+                  (r"/contact/display/comb", DisplayCombHandler)
                  ]
         self.db = motor.MotorClient(options.mongo_url).contact
         self.publish = mickey.publish
