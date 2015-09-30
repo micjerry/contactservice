@@ -62,6 +62,7 @@ class AddContactHandler(BaseHandler):
               "comment": comment,
               "nickname": user_nick,
               "usertype": usertype,
+              "pub_type": "any",
               "nty_type": "device",
               "msg_type": "other"
             }
