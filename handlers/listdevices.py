@@ -14,7 +14,7 @@ from mickey.basehandler import BaseHandler
 
 _getdevice_sql = """
   SELECT a.combo, DATE_FORMAT(a.st_time,'%s') as st_time, DATE_FORMAT(DATE_ADD(a.st_time, INTERVAL a.month MONTH), '%s') AS end_time, 
-         b.rec_name, b.rec_phone, b.rec_address FROM devices a JOIN dispatch_bills b WHERE a.dis_id = b.sid AND a.u_id = '%s';
+         b.rec_name, b.rec_phone, b.rec_address ,c.name FROM devices a JOIN dispatch_bills b LEFT JOIN combs c ON (a.combo = c.com_id) WHERE a.dis_id = b.sid AND a.u_id = '%s';
 """
 
 class ListDeviceHandler(BaseHandler):
@@ -54,6 +54,7 @@ class ListDeviceHandler(BaseHandler):
                     device["st_time"] = c_deviceinfo.get("st_time", "")
                     device["end_time"] = c_deviceinfo.get("end_time", "")
                     device["combo_id"] = c_deviceinfo.get("combo", "")
+                    device["combo_name"] = c_deviceinfo.get("name", "")
 
                 rs_devices.append(device)
 

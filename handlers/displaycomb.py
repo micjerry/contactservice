@@ -13,7 +13,7 @@ import mickey.userfetcher
 from mickey.basehandler import BaseHandler
 
 _query_sql = """
-  SELECT comdesc FROM combs WHERE name = %s;
+  SELECT comdesc FROM combs WHERE com_id = %s;
 """
 
 class DisplayCombHandler(BaseHandler):
@@ -21,7 +21,7 @@ class DisplayCombHandler(BaseHandler):
     @tornado.gen.coroutine
     def post(self):
         data = json.loads(self.request.body.decode("utf-8"))
-        comname = data.get("name", "")
+        comname = data.get("combo_id", "")
 
         logging.info("list contact for %s" % comname)
 

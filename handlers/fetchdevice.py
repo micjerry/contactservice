@@ -31,6 +31,9 @@ _unused_sql = """
   DELETE FROM order_seqs WHERE order_tag = %s;
 """
 
+_valid_len = 6
+_valid_iter = '0123456789abcdefghijklmnopqrstuvwxyz'
+
 class FetchDeviceHandler(BaseHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
@@ -52,6 +55,20 @@ class FetchDeviceHandler(BaseHandler):
             self.finish()
             return
                 
+        #check tag is valid
+        if len(order_tag) != _valid_len:
+            self.set_status(403)
+            self.finish()
+            return
+
+        for item in order_tag:
+            if item not in _valid_iter:
+                logging.error('invlaid %s in tag' % item)
+                self.set_status(403)
+                self.finish()
+                return
+
+
         devices = yield self.get_devices(order_tag)
         if not devices:
             self.set_retry(self.p_userid, retry_times + 1)
@@ -60,7 +77,7 @@ class FetchDeviceHandler(BaseHandler):
             self.finish()
             return
 
-        result = yield self.unset_flag(order_tag)
+        result = yield self.unset_flag(order_tag, self.p_userid)
         if not result:
             logging.error("unset flag failed")
             self.set_status(500)
@@ -119,13 +136,13 @@ class FetchDeviceHandler(BaseHandler):
             conn.close()
 
     @tornado.gen.coroutine
-    def unset_flag(self, order_tag):
+    def unset_flag(self, order_tag, userid):
         conn = yield get_mysqlcon()
         if not conn:
             logging.error("connect to mysql failed")
             return False
         
-        unused_tag = order_tag + "_un"
+        unused_tag = order_tag + "_" + userid
         try:
             cur = conn.cursor()
             yield cur.execute(_unset_sql, (unused_tag, order_tag))
@@ -134,6 +151,8 @@ class FetchDeviceHandler(BaseHandler):
         except Exception as e:
             logging.error("insert db failed {0}".format(e))
             return False
+        finally:
+            conn.close()
 
         return True
             
