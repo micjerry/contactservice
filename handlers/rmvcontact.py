@@ -29,8 +29,7 @@ class RmvContactHandler(BaseHandler):
 
         result = yield coll.find_and_modify({"id":userid}, 
                                             {
-                                              "$pull":{"contacts":{"id":contactid}},
-                                              "$pull":{"appendings":{"id":contactid}},
+                                              "$pull":{"contacts":{"id":contactid}, "appendings":{"id":contactid}},
                                               "$set": {"flag" : flag}
                                             })
 
