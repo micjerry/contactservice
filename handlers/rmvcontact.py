@@ -14,6 +14,8 @@ class RmvContactHandler(BaseHandler):
     @tornado.gen.coroutine
     def post(self):
         coll = self.application.db.users
+        publish = self.application.publish
+
         data = json.loads(self.request.body.decode("utf-8"))
         userid = data.get("id", "invalid")
         contactid = data.get("contactid", "invalid")
@@ -34,8 +36,28 @@ class RmvContactHandler(BaseHandler):
                                             })
 
 
+        #update contact
+        c_result = yield coll.find_and_modify({"id":contactid},
+                                            {
+                                              "$pull":{"contacts":{"id": userid}},
+                                              "$push":{"appendings":{"id": userid}},
+                                              "$set": {"flag" : flag}
+                                            })
+
+        #notify the contact
+        if c_result:
+            if userid in [x.get("id", "") for x in c_result.get("contacts", [])]:
+                notify = {
+                 "name": "mx.contact.rmv_contact",
+                 "userid": userid,
+                 "pub_type": "any",
+                 "nty_type": "app"
+                }
+                publish.publish_one(contactid, notify)
+
         if result:
             self.set_status(200)
+            
         else:
             logging.info("remove failed")
             self.set_status(404)
