@@ -40,13 +40,19 @@ class RmvContactHandler(BaseHandler):
         c_result = yield coll.find_and_modify({"id":contactid},
                                             {
                                               "$pull":{"contacts":{"id": userid}},
-                                              "$push":{"appendings":{"id": userid}},
                                               "$set": {"flag" : flag}
                                             })
 
-        #notify the contact
+        #handle contact
         if c_result:
             if userid in [x.get("id", "") for x in c_result.get("contacts", [])]:
+                #set break relation flag
+                break_rst = yield coll.find_and_modify({"id":contactid},
+                                            {
+                                              "$push":{"appendings":{"id": userid,"action":"break"}},
+                                              "$set": {"flag" : flag}
+                                            })
+                #notify the contact
                 notify = {
                  "name": "mx.contact.rmv_contact",
                  "userid": userid,

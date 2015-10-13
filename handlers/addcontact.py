@@ -122,7 +122,7 @@ class AddContactHandler(BaseHandler):
                 body["desc"] = self.ADDTYPE_AUTH
                 yield coll.find_and_modify({"id":userid}, 
                                            {
-                                             "$push":{"appendings":{"id":contactid, "nickname":contact_nick}}, 
+                                             "$push":{"appendings":{"id":contactid, "nickname":contact_nick, "action":"offer"}}, 
                                              "$set": {"flag":change_flag}, 
                                              "$unset": {"garbage": 1}
                                            })
