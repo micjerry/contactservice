@@ -129,6 +129,7 @@ class AddContactHandler(BaseHandler):
 
             # notify the user who was added as a friend
             publish.publish_one(contactid, notify)
+            body["contactid"] = contactid
             self.write(body)
             self.finish()
         else:

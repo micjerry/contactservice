@@ -4,7 +4,6 @@ import json
 import io
 import logging
 
-import motor
 from redis.sentinel import Sentinel
 
 import tornado_mysql
@@ -20,13 +19,16 @@ _sentinel_master = _sentinel.master_for('master', socket_timeout = 0.5)
 _retry_flag = 'fetchdevice_%s'
 
 _getdevice_sql = """
-  SELECT u_id FROM devices WHERE order_tag = %s;
+  SELECT sn FROM devices WHERE order_tag = %s;
+"""
+
+_fetch_sql = """
+  UPDATE userentity a, account b SET a.owner = %s WHERE a.userID = b.userEntity_userID and b.name = %s;
 """
 
 _unset_sql = """
   UPDATE devices SET order_tag = %s, fetchby = %s WHERE order_tag = %s;
 """
-
 _unused_sql = """
   DELETE FROM order_seqs WHERE order_tag = %s;
 """
@@ -48,7 +50,8 @@ class FetchDeviceHandler(BaseHandler):
             self.finish()
             return        
 
-        retry_times = self.check_retry(self.p_userid)
+        #check retry times
+        retry_times = self.get_retry(self.p_userid)
         if retry_times > 5:
             logging.error("retry too many times %s" % self.p_userid)
             self.set_status(403)
@@ -68,7 +71,6 @@ class FetchDeviceHandler(BaseHandler):
                 self.finish()
                 return
 
-
         devices = yield self.get_devices(order_tag)
         if not devices:
             self.set_retry(self.p_userid, retry_times + 1)
@@ -78,24 +80,26 @@ class FetchDeviceHandler(BaseHandler):
             return
 
         self.set_retry(self.p_userid, 0)        
+        
+        #fetch devices
+        fetch_result = yield self.fetch_devices(self.p_userid, devices)
+        if not fetch_result:
+            logging.error("fetch devices failed")
+            self.set_status(500)
+            self.finish()
+            return
 
-        result = yield self.unset_flag(order_tag, self.p_userid)
-        if not result:
+        #unset devices
+        unset_result = yield self.unset_flag(order_tag, self.p_userid)
+        if not unset_result:
             logging.error("unset flag failed")
             self.set_status(500)
             self.finish()
             return
 
-        #update devices
-        yield coll.find_and_modify({"id":self.p_userid},
-                                   {
-                                     "$addToSet":{"devices":{"$each": devices}},
-                                     "$unset": {"garbage": 1}
-                                   })
-
         self.finish()
 
-    def check_retry(self, userid):
+    def get_retry(self, userid):
         retry_times = 0
         retrys = None
         try:
@@ -131,7 +135,7 @@ class FetchDeviceHandler(BaseHandler):
             cur = conn.cursor(tornado_mysql.cursors.DictCursor)
             yield cur.execute(_getdevice_sql, (order_tag))
             rows = cur.fetchall()
-            devices = [x.get("u_id", "") for x in rows]  
+            devices = [x.get("sn", "") for x in rows]  
             cur.close()
 
             return devices
@@ -140,6 +144,29 @@ class FetchDeviceHandler(BaseHandler):
             return []
         finally:
             conn.close()
+
+    @tornado.gen.coroutine
+    def fetch_devices(self, userid, devices):
+        conn = yield get_mysqlcon('mxsuser')
+        if not conn:
+            logging.error("connect to mysql failed")
+            return False
+
+        try:
+            cur = conn.cursor()
+            for item in devices:
+                yield cur.execute(_fetch_sql, (userid, item))
+
+            cur.close()
+            yield conn.commit()
+        except Exception as e:
+            logging.error("oper db failed {0}".format(e))
+            return False
+        finally:
+            conn.close()
+
+        return True
+
 
     @tornado.gen.coroutine
     def unset_flag(self, order_tag, userid):
@@ -153,6 +180,7 @@ class FetchDeviceHandler(BaseHandler):
             cur = conn.cursor()
             yield cur.execute(_unset_sql, (unused_tag, self.p_userid, order_tag))
             yield cur.execute(_unused_sql,(order_tag))
+            cur.close()
             yield conn.commit()
         except Exception as e:
             logging.error("insert db failed {0}".format(e))
