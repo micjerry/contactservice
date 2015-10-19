@@ -40,7 +40,6 @@ class FetchDeviceHandler(BaseHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def post(self):
-        coll = self.application.db.users
         data = json.loads(self.request.body.decode("utf-8"))
         order_tag = data.get("order_seq", "").lower()
         logging.info("%s fetch device %s" % (self.p_userid, order_tag))

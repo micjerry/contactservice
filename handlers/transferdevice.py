@@ -4,16 +4,19 @@ import json
 import io
 import logging
 
-import motor
+from mickey.mysqlcon import get_mysqlcon
 
 import mickey.userfetcher
 from mickey.basehandler import BaseHandler
+
+_transfer_sql = """
+  UPDATE userentity set owner = %s WHERE userID = %s AND owner = %s;
+"""
 
 class TransferDeviceHandler(BaseHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def post(self):
-        coll = self.application.db.users
         data = json.loads(self.request.body.decode("utf-8"))
         devices = data.get("devices", [])
         userid = data.get("userid", "")
@@ -25,36 +28,36 @@ class TransferDeviceHandler(BaseHandler):
             self.finish()
             return
 
-        user = yield coll.find_one({"id":self.p_userid})
-        if not user:
-            logging.error("user %s was not found" % self.p_userid)
-            self.set_status(404)
-            self.finish()
-            return
+        result = yield self.transfer_devices(devices, userid, self.p_userid)
         
-        #remove device from transfer
-        result = yield coll.find_and_modify({"id":self.p_userid},
-                                            {
-                                              "$pullAll":{"devices": devices}
-                                            })
         if not result:
             logging.error("transfer failed remove failure")
             self.set_status(500)
             self.finish()
             return
 
-        #add device to transfee
-        result = yield coll.find_and_modify({"id":userid},
-                                            {
-                                              "$push":{"devices": {"$each": devices}},
-                                              "$unset": {"garbage": 1}
-                                            })
-
-        if not result:
-            logging.error("transfer failed add failure")
-            self.set_status(500)
-            self.finish()
-            return
-
         self.set_status(200)
         self.finish()
+
+    @tornado.gen.coroutine
+    def transfer_devices(self, devices, new_userid, old_userid):
+        conn = yield get_mysqlcon('mxsuser')
+        if not conn:
+            logging.error("connect to mysql failed")
+            return False
+
+        try:
+            cur = conn.cursor()
+            for item in devices:
+                yield cur.execute(_transfer_sql, (new_userid, item, old_userid))
+
+            cur.close()
+            yield conn.commit()
+        except Exception as e:
+            logging.error("oper db failed {0}".format(e))
+            return False
+        finally:
+            conn.close()
+
+        return True
+
