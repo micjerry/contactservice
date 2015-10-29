@@ -8,6 +8,12 @@ import motor
 import uuid
 
 from mickey.basehandler import BaseHandler
+import tornado_mysql
+from mickey.mysqlcon import get_mysqlcon
+
+_checkdevice_sql = """
+  SELECT userID FROM userentity WHERE userID = %s AND owner = %s;
+"""
 
 class AddContactHandler(BaseHandler):
     USERTYPE_PERSON    = "PERSON"
@@ -30,6 +36,7 @@ class AddContactHandler(BaseHandler):
         user_nick    = data.get("nickname", "")
         contact_nick = data.get("contactnick", "")
         comment      = data.get("comment", "")
+        addtype      = data.get("addtype", "").lower()
         change_flag  = str(uuid.uuid4()).replace('-', '_')
 
         logging.info("begin to handle add contact request, userid = %s contact = %s type = %s nick = %s cnick = %s" % (userid, contactid, contact_type, user_nick, contact_nick))
@@ -106,8 +113,14 @@ class AddContactHandler(BaseHandler):
                 else:
                     pass
 
+            is_mydevice = False
+            if contact_type == self.USERTYPE_TERMINAL:
+                is_mydevice = yield self.check_device(contactid, userid)
+
+            is_bindadd = True if addtype == "bind" else False
+
             # begin to add friend
-            if already_added_by_friend or contact_type == self.USERTYPE_TERMINAL:
+            if already_added_by_friend or is_bindadd or is_mydevice:
                 #just add to contact
                 notify["desc"] = self.ADDTYPE_OK
                 body["desc"] = self.ADDTYPE_OK
@@ -137,4 +150,23 @@ class AddContactHandler(BaseHandler):
             self.set_status(404)
             self.write({"error":"not found"});
             self.finish()
+
+    @tornado.gen.coroutine
+    def check_device(self, userid, deviceid):
+        conn = yield get_mysqlcon('mxsuser')
+        if not conn:
+            logging.error("connect to mysql failed")
+            return False
+
+        try:
+            cur = conn.cursor()
+            yield cur.execute(_checkdevice_sql, (deviceid, userid))
+            rows = cur.fetchall()
+            cur.close()
+            return rows
+        except Exception as e:
+            logging.error("oper db failed {0}".format(e))
+            return False
+        finally:
+            conn.close()
 

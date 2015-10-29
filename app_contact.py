@@ -21,6 +21,7 @@ from handlers.addcontact import AddContactHandler
 from handlers.displaycontact import DispayContactHandler
 from handlers.rmvcontact import RmvContactHandler
 from handlers.markcontact import MarkContactHandler
+from handlers.starcontact import StarContactHandler
 from handlers.fetchdevice import FetchDeviceHandler
 from handlers.listdevices import ListDeviceHandler
 from handlers.transferdevice import TransferDeviceHandler
@@ -43,6 +44,7 @@ class Application(tornado.web.Application):
                   (r"/contact/display/detail", DispayContactHandler),
                   (r"/contact/remove/friend", RmvContactHandler),
                   (r"/contact/mod/remark", MarkContactHandler),
+                  (r"/contact/mod/star", StarContactHandler),
                   (r"/contact/fetch/devices", FetchDeviceHandler),
                   (r"/contact/list/devices", ListDeviceHandler),
                   (r"/contact/transfer/device", TransferDeviceHandler),
