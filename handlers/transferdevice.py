@@ -10,7 +10,7 @@ import mickey.userfetcher
 from mickey.basehandler import BaseHandler
 
 _transfer_sql = """
-  UPDATE deviceusermap set userEntity_userID = %s WHERE device_userID = %s AND userEntity_userID = %s;
+  UPDATE deviceusermap set userEntity_userID = %s WHERE device_userID = %s AND userEntity_userID = %s AND role = %s;
 """
 
 class TransferDeviceHandler(BaseHandler):
@@ -49,7 +49,7 @@ class TransferDeviceHandler(BaseHandler):
         try:
             cur = conn.cursor()
             for item in devices:
-                yield cur.execute(_transfer_sql, (new_userid, item, old_userid))
+                yield cur.execute(_transfer_sql, (new_userid, item, old_userid, 'ADMIN'))
 
             cur.close()
             yield conn.commit()

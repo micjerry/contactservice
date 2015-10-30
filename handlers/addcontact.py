@@ -12,7 +12,7 @@ import tornado_mysql
 from mickey.mysqlcon import get_mysqlcon
 
 _checkdevice_sql = """
-  SELECT userID FROM userentity WHERE userID = %s AND owner = %s;
+  SELECT device_userID FROM deviceusermap WHERE device_userID = %s AND userEntity_userID = %s AND role = %s;
 """
 
 class AddContactHandler(BaseHandler):
@@ -160,7 +160,7 @@ class AddContactHandler(BaseHandler):
 
         try:
             cur = conn.cursor()
-            yield cur.execute(_checkdevice_sql, (deviceid, userid))
+            yield cur.execute(_checkdevice_sql, (deviceid, userid, 'ADMIN'))
             rows = cur.fetchall()
             cur.close()
             return rows
