@@ -16,6 +16,7 @@ class StarContactHandler(BaseHandler):
         data = json.loads(self.request.body.decode("utf-8"))
         userid = data.get("id", "invalid")
         contactid = data.get("contactid", "invalid")
+        stared = data.get("star", "true")
         flag = str(uuid.uuid4()).replace('-', '_')
 
         logging.info("user %s begin to star contact %s" % (userid, contactid))
@@ -38,7 +39,7 @@ class StarContactHandler(BaseHandler):
                                {
                                  "$set":
                                   {
-                                   "contacts.$.star" : "true",
+                                   "contacts.$.star" : stared,
                                    "flag" : flag
                                   }
                                }
