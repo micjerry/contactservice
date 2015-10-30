@@ -23,7 +23,7 @@ _getdevice_sql = """
 """
 
 _fetch_sql = """
-  UPDATE userentity a, account b SET a.owner = %s WHERE a.userID = b.userEntity_userID and b.name = %s;
+  INSERT INTO deviceusermap(role, device_userID, userEntity_userID) VALUES(%s, %s, %s);
 """
 
 _unset_sql = """
@@ -154,7 +154,7 @@ class FetchDeviceHandler(BaseHandler):
         try:
             cur = conn.cursor()
             for item in devices:
-                yield cur.execute(_fetch_sql, (userid, item))
+                yield cur.execute(_fetch_sql, ('ADMIN', item, userid))
 
             cur.close()
             yield conn.commit()

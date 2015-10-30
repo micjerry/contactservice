@@ -10,7 +10,7 @@ import mickey.userfetcher
 from mickey.basehandler import BaseHandler
 
 _transfer_sql = """
-  UPDATE userentity set owner = %s WHERE userID = %s AND owner = %s;
+  UPDATE deviceusermap set userEntity_userID = %s WHERE device_userID = %s AND userEntity_userID = %s;
 """
 
 class TransferDeviceHandler(BaseHandler):

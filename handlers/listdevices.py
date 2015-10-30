@@ -13,7 +13,9 @@ from mickey.basehandler import BaseHandler
 
 
 _getmydevice_sql = """
-    SELECT a.userID, a.commName, a.name, b.name as sn FROM userentity a JOIN account b WHERE a.userID = b.userEntity_userID and a.owner = %s AND b.type = %s;
+    SELECT a.userID, a.commName, a.name, b.name as sn FROM userentity a JOIN account b LEFT JOIN deviceusermap c ON (c.device_userID=a.userID) WHERE a.userID = b.userEntity_userID AND 
+      c.userEntity_userID = %s AND 
+      b.type = %s AND c.role = %s;
 """
 _getdevice_sql = """
   SELECT a.combo, DATE_FORMAT(a.st_time,'%s') as st_time, DATE_FORMAT(DATE_ADD(a.st_time, INTERVAL a.month MONTH), '%s') AS end_time, 
@@ -73,7 +75,7 @@ class ListDeviceHandler(BaseHandler):
             return []
         try:
             cur = conn.cursor(tornado_mysql.cursors.DictCursor)
-            yield cur.execute(_getmydevice_sql, (userid, 'TerminalAccount'))
+            yield cur.execute(_getmydevice_sql, (userid, 'TerminalAccount', 'ADMIN'))
             rows = cur.fetchall()
             cur.close()
             return rows
