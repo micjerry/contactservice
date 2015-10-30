@@ -38,7 +38,7 @@ class StarContactHandler(BaseHandler):
                                {
                                  "$set":
                                   {
-                                   "contacts.$.sdfdfd" : "yes",
+                                   "contacts.$.star" : "true",
                                    "flag" : flag
                                   }
                                }
