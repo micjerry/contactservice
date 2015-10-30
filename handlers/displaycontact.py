@@ -31,16 +31,19 @@ class DispayContactHandler(BaseHandler):
 
         #get remark
         remark = ""
+        star = ""
         result = yield coll.find_one({"id":userid})
         if result:
             contacts = list(filter(lambda x: x.get("id", "") == contactid, result.get("contacts", [])))
             for contact in contacts:
                 remark =  contact.get("remark", "")
+                star = contact.get("star", "")
                 break
  
         userinfo = {}
         userinfo["id"] = contactid
         userinfo["remark"] = remark
+        userinfo["star"] = star
         userinfo["nickname"] = res_body.get("commName", "")
         userinfo["contactInfos"] = res_body.get("contactInfos", [])
         userinfo["type"] = res_body.get("type", "")
