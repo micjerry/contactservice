@@ -70,7 +70,7 @@ class AddContactHandler(BaseHandler):
               "nickname": user_nick,
               "usertype": usertype,
               "pub_type": "any",
-              "nty_type": "device",
+              "nty_type": "app",
               "msg_type": "other"
             }
 
