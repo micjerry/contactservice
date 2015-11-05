@@ -45,12 +45,13 @@ class ListContactHandler(BaseHandler):
                 c_id = item.get("id", "")
                 contact["id"] = c_id
                 contact["remark"] = item.get("remark", "")
-                contact["type"] = item.get("type", "")
+                #contact["type"] = item.get("type", "")
                 contact["star"] = item.get("star", "")
                 c_userinfo = yield mickey.userfetcher.getcontact(c_id)
                 if c_userinfo:
                     contact["nickname"] = c_userinfo.get("commName", "")
                     contact["sign"] = c_userinfo.get("sign", "")
+                    contact["type"] = c_userinfo.get("type", "")
                     
                 rs_contacts.append(contact)
 
