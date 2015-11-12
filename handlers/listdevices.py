@@ -47,6 +47,8 @@ class ListDeviceHandler(BaseHandler):
                 device["name"] = item.get("name", "")
 
                 sn_id = item.get("sn", "")
+                device["sn"] = sn_id
+                device["model"] = "M1"
                 c_deviceinfo = yield self.fetch_device(sn_id)
                 if c_deviceinfo:
                     device["address"] = c_deviceinfo.get("rec_address", "")
