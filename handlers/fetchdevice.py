@@ -22,6 +22,10 @@ _getdevice_sql = """
   SELECT sn FROM devices WHERE order_tag = %s;
 """
 
+_getdevice_userid_sql = """
+  SELECT userEntity_userID FROM account WHERE name IN %s;
+"""
+
 _fetch_sql = """
   INSERT INTO deviceusermap(role, device_userID, userEntity_userID) VALUES(%s, %s, %s);
 """
@@ -125,6 +129,7 @@ class FetchDeviceHandler(BaseHandler):
 
     @tornado.gen.coroutine
     def get_devices(self, order_tag):
+        devices = None
         conn = yield get_mysqlcon()
         if not conn:
             logging.error("connect to mysql failed")
@@ -137,7 +142,39 @@ class FetchDeviceHandler(BaseHandler):
             devices = [x.get("sn", "") for x in rows]  
             cur.close()
 
-            return devices
+            #return devices
+        except Exception as e:
+            logging.error("db oper failed {0}".format(e))
+            return []
+        finally:
+            conn.close()
+
+        #get user id
+        if not devices:
+            return None
+
+        list_sn = "("
+        for item in devices:
+            list_sn = list_sn + item + ','
+        list_sn = list_sn[:-1]
+        list_sn = list_sn + ")"
+
+        format_sql = _getdevice_userid_sql % list_sn
+        logging.info("format sql %s " % format_sql)
+
+        conn = yield get_mysqlcon('mxsuser')
+        if not conn:
+            logging.error("connect to mysql failed")
+            return []        
+
+        try:
+            cur = conn.cursor(tornado_mysql.cursors.DictCursor)
+            yield cur.execute(format_sql)
+            rows = cur.fetchall()
+            device_ids = [x.get("userEntity_userID", "") for x in rows]
+            cur.close()
+
+            return device_ids
         except Exception as e:
             logging.error("db oper failed {0}".format(e))
             return []
