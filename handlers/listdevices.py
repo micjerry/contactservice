@@ -61,7 +61,16 @@ class ListDeviceHandler(BaseHandler):
 
                 rs_devices.append(device)
 
-            self.write({"devices": rs_devices})
+            total_count = {}
+            if rs_devices:
+                for item in rs_devices:
+                    model = item.get("model", "")
+                    if total_count.get(model, ""):
+                       total_count[model] = total_count[model] + 1
+                    else:
+                       total_count[model] = 1
+
+            self.write({"devices": rs_devices, "total_count": total_count})
 
         else:
             logging.error("user %s was not found" % userid)
