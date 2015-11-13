@@ -87,9 +87,23 @@ class FetchOrderHandler(BaseHandler):
             self.finish()
             return
 
+        #add model info
+        for item in devices:
+            item["model"] = "M1"
+
+        #get total count info
+        total_count = {}
+        for item in devices:
+            model = item.get("model", "")
+            if total_count.get(model, ""):
+               total_count[model] = total_count[model] + 1
+            else:
+               total_count[model] = 1
+
         result = {}
         result['order'] = order_info
         result['devices'] = devices
+        result['total_count'] = total_count
 
         #update devices
         self.write(result)
