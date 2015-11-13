@@ -100,6 +100,9 @@ class FetchOrderHandler(BaseHandler):
             else:
                total_count[model] = 1
 
+        for key, value in total_count.items():
+            total_count[key] = str(value)
+
         result = {}
         result['order'] = order_info
         result['devices'] = devices
