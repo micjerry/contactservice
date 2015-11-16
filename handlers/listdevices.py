@@ -19,7 +19,7 @@ _getmydevice_sql = """
 """
 _getdevice_sql = """
   SELECT a.combo, DATE_FORMAT(a.st_time,'%s') as st_time, DATE_FORMAT(DATE_ADD(a.st_time, INTERVAL a.month MONTH), '%s') AS end_time,
-         b.rec_name, b.rec_phone, b.rec_address, b.express_id ,c.name, d.oid FROM devices a JOIN dispatch_bills b LEFT JOIN combs c ON (a.combo = c.com_id) LEFT JOIN order_bills d ON (b.order_id = d.sid) 
+         b.rec_name, b.rec_phone, b.rec_address, b.express_id, b.express_name, c.name, d.oid FROM devices a JOIN dispatch_bills b LEFT JOIN combs c ON (a.combo = c.com_id) LEFT JOIN order_bills d ON (b.order_id = d.sid) 
          WHERE a.dis_id = b.sid AND a.sn = '%s';
 """
 
@@ -61,6 +61,7 @@ class ListDeviceHandler(BaseHandler):
                     device["combo_name"] = c_deviceinfo.get("name", "")
                     device["oid"] = c_deviceinfo.get("oid", "")
                     device["express_id"] = c_deviceinfo.get("express_id", "")
+                    device["express_name"] = c_deviceinfo.get("express_name", "")
 
                 rs_devices.append(device)
 
