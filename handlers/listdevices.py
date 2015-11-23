@@ -6,22 +6,9 @@ import logging
 
 import tornado_mysql
 
-from mickey.mysqlcon import get_mysqlcon
-
 import mickey.userfetcher
 from mickey.basehandler import BaseHandler
-
-
-_getmydevice_sql = """
-    SELECT a.userID, a.commName, a.name, b.name as sn FROM userentity a JOIN account b LEFT JOIN deviceusermap c ON (c.device_userID=a.userID) WHERE a.userID = b.userEntity_userID AND 
-      c.userEntity_userID = %s AND 
-      b.type = %s AND c.role = %s;
-"""
-_getdevice_sql = """
-  SELECT a.combo, DATE_FORMAT(a.st_time,'%s') as st_time, DATE_FORMAT(DATE_ADD(a.st_time, INTERVAL a.month MONTH), '%s') AS end_time,
-         b.rec_name, b.rec_phone, b.rec_address, b.express_id, b.express_name, c.name, d.oid FROM devices a JOIN dispatch_bills b LEFT JOIN combs c ON (a.combo = c.com_id) LEFT JOIN order_bills d ON (b.order_id = d.sid) 
-         WHERE a.dis_id = b.sid AND a.sn = '%s';
-"""
+import libcontact
 
 class ListDeviceHandler(BaseHandler):
     @tornado.web.asynchronous
@@ -38,19 +25,19 @@ class ListDeviceHandler(BaseHandler):
             self.finish()
             return
 
-        devices = yield self.get_mydevices(self.p_userid)
+        devices = yield libcontact.get_mydevices(self.p_userid)
+        rs_devices = []
         if devices:
-            rs_devices = []
             for item in devices:
                 device = {}
-                device["id"] = device_id = str(item.get("userID", ""))
+                device["id"] = str(item.get("userID", ""))
                 device["nickname"] = item.get("commName", "")
                 device["name"] = item.get("name", "")
 
                 sn_id = item.get("sn", "")
                 device["sn"] = sn_id
                 device["model"] = "M1"
-                c_deviceinfo = yield self.fetch_device(sn_id)
+                c_deviceinfo = yield libcontact.fetch_device(sn_id)
                 if c_deviceinfo:
                     device["address"] = c_deviceinfo.get("rec_address", "")
                     device["receiver"] = c_deviceinfo.get("rec_name", "")
@@ -65,50 +52,40 @@ class ListDeviceHandler(BaseHandler):
 
                 rs_devices.append(device)
 
+        user_phone = yield libcontact.get_bindphone(self.p_userid)
+        use_devices = None
+        if user_phone:
+            use_devices = yield libcontact.get_myusedevices(user_phone)
 
-            self.write({"devices": rs_devices})
+        rs_usedevices = []
+        if use_devices:
+            for item in use_devices:
+                device = {}
+                device["id"] = str(item.get("userID", ""))
+                device["nickname"] = item.get("commName", "")
+                device["name"] = item.get("name", "")
 
-        else:
-            logging.error("user %s was not found" % userid)
-            self.set_status(404)
-            self.write({"error":"not found"});
+                sn_id = item.get("sn", "")
+                device["sn"] = sn_id
+                device["model"] = "M1"
+                c_deviceinfo = yield libcontact.fetch_device(sn_id)
+                if c_deviceinfo:
+                    device["address"] = c_deviceinfo.get("rec_address", "")
+                    device["receiver"] = c_deviceinfo.get("rec_name", "")
+                    device["receiver_phone"] = c_deviceinfo.get("rec_phone", "")
+                    device["st_time"] = c_deviceinfo.get("st_time", "")
+                    device["end_time"] = c_deviceinfo.get("end_time", "")
+                    device["combo_id"] = c_deviceinfo.get("combo", "")
+                    device["combo_name"] = c_deviceinfo.get("name", "")
+                    device["oid"] = c_deviceinfo.get("oid", "")
+                    device["express_id"] = c_deviceinfo.get("express_id", "")
+                    device["express_name"] = c_deviceinfo.get("express_name", "")
+
+                rs_usedevices.append(device)
+
+
+            self.write({"devices": rs_devices, "usedevices": rs_usedevices})
+
         self.finish()
 
-    @tornado.gen.coroutine
-    def get_mydevices(self, userid):
-        conn = yield get_mysqlcon('mxsuser')
-        if not conn:
-            logging.error("connect to mysql failed")
-            return []
-        try:
-            cur = conn.cursor(tornado_mysql.cursors.DictCursor)
-            yield cur.execute(_getmydevice_sql, (userid, 'TerminalAccount', 'ADMIN'))
-            rows = cur.fetchall()
-            cur.close()
-            return rows
-        except Exception as e:
-            logging.error("db oper failed {0}".format(e))
-            return []
-        finally:
-            conn.close()
 
-        
-    @tornado.gen.coroutine
-    def fetch_device(self, deviceid):
-        conn = yield get_mysqlcon()
-        if not conn:
-            logging.error("connect to mysql failed")
-            return {}
-
-        try:
-            cur = conn.cursor(tornado_mysql.cursors.DictCursor)
-            qy_sql = _getdevice_sql % ('%Y-%m-%d', '%Y-%m-%d', deviceid)
-            yield cur.execute(qy_sql)
-            device = cur.fetchone()
-            cur.close()
-            return device
-        except Exception as e:
-            logging.error("db oper failed {0}".format(e))
-            return {}
-        finally:
-            conn.close()

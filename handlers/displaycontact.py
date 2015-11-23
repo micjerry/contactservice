@@ -9,6 +9,7 @@ import logging
 import motor
 import mickey.userfetcher
 from mickey.basehandler import BaseHandler
+import libcontact
 
 class DispayContactHandler(BaseHandler):
     @tornado.web.asynchronous
@@ -49,6 +50,13 @@ class DispayContactHandler(BaseHandler):
         userinfo["type"] = res_body.get("type", "")
         userinfo["sign"] = res_body.get("sign", "")
         userinfo["sex"] = res_body.get("sex", 0)
+
+        if res_body.get("type", "") == "TERMINAL":
+            admin_info = yield libcontact.get_admininfo(contactid)
+            users = yield libcontact.get_userinfo(contactid)
+
+            userinfo["admin"] = admin_info
+            userinfo["users"] = users
 
         self.write(userinfo)
 
