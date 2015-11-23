@@ -84,7 +84,7 @@ class ListDeviceHandler(BaseHandler):
                 rs_usedevices.append(device)
 
 
-            self.write({"devices": rs_devices, "usedevices": rs_usedevices})
+        self.write({"devices": rs_devices, "usedevices": rs_usedevices})
 
         self.finish()
 
