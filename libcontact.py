@@ -33,8 +33,8 @@ _queryadmin_sql = """
 """
 
 _queryusers_sql = """
-  SELECT c.commName as nickname, c.userID as id FROM deviceusermap a JOIN account b LEFT JOIN userentity c ON (b.userEntity_userID = c.userID) WHERE 
-    a.searchKey = b.name AND a.device_userID = %s AND a.role = %s;
+  SELECT c.commName AS nickname, c.userID AS id FROM deviceusermap a JOIN account b LEFT JOIN userentity c ON (b.userEntity_userID = c.userID) WHERE
+    a.searchKey = b.name AND a.device_userID = %s AND b.type = %s AND a.role = %s;
 """
 
 _getmydevice_sql = """
@@ -236,7 +236,7 @@ def get_userinfo(deviceid):
 
     try:
         cur = conn.cursor(tornado_mysql.cursors.DictCursor)
-        yield cur.execute(_queryadmin_sql, (deviceid, 'USER'))
+        yield cur.execute(_queryusers_sql, (deviceid, 'MobileAccount', 'USER'))
         rows = cur.fetchall()
         cur.close()
         return rows
