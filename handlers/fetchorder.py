@@ -5,7 +5,6 @@ import io
 import logging
 
 import motor
-from redis.sentinel import Sentinel
 
 import tornado_mysql
 from mickey.mysqlcon import get_mysqlcon
@@ -13,9 +12,18 @@ from mickey.mysqlcon import get_mysqlcon
 import mickey.userfetcher
 from mickey.basehandler import BaseHandler
 
-_sentinel = Sentinel([('localhost', 26379)], socket_timeout = 1)
-_sentinel_salve = _sentinel.slave_for('master', socket_timeout = 0.5)
-_sentinel_master = _sentinel.master_for('master', socket_timeout = 0.5)
+from mickey.commonconf import SINGLE_MODE
+
+if SINGLE_MODE:
+    import redis
+    _sentinel         = redis.StrictRedis(host='localhost', port=6379, db=0, socket_timeout=5.0)
+    _sentinel_salve   = _sentinel
+    _sentinel_master  = _sentinel
+else:
+    from redis.sentinel import Sentinel
+    _sentinel = Sentinel([('localhost', 26379)], socket_timeout = 1)
+    _sentinel_salve = _sentinel.slave_for('master', socket_timeout = 0.5)
+    _sentinel_master = _sentinel.master_for('master', socket_timeout = 0.5)
 
 _retry_flag = 'fetchdevice_%s'
 
