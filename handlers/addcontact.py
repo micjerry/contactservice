@@ -71,7 +71,8 @@ class AddContactHandler(BaseHandler):
               "usertype": usertype,
               "pub_type": "any",
               "nty_type": "app",
-              "msg_type": "other"
+              "msg_type": "other",
+              "addtype": addtype
             }
 
             # response body

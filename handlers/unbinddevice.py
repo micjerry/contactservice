@@ -19,6 +19,7 @@ class UnBindDeviceHandler(BaseHandler):
     def post(self):
         coll = self.application.db.users
         publish = self.application.publish
+        token = self.request.headers.get("Authorization", "")
 
         #get parameters of request
         data         = json.loads(self.request.body.decode("utf-8"))
@@ -47,7 +48,7 @@ class UnBindDeviceHandler(BaseHandler):
 
         username = ""
         devicename = ""
-        res_device = yield mickey.userfetcher.getcontact(deviceid)
+        res_device = yield mickey.userfetcher.getcontact(deviceid, token)
 
         if res_device:
             devicename = res_device.get("commName", "")
@@ -60,7 +61,7 @@ class UnBindDeviceHandler(BaseHandler):
                 continue
 
             yield libcontact.un_bind(deviceid, phone)
-            res_user = yield mickey.userfetcher.getcontact(item)
+            res_user = yield mickey.userfetcher.getcontact(item, token)
             if res_user:
                 username = res_user.get("commName", "")
 

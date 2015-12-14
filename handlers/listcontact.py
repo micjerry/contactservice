@@ -19,6 +19,7 @@ class ListContactHandler(BaseHandler):
         userid = data.get("id", "invalid")
         client_flag = data.get("flag", "")
         server_flag = None
+        token = self.request.headers.get("Authorization", "")
 
         logging.info("list contact for %s" % userid)
 
@@ -47,7 +48,7 @@ class ListContactHandler(BaseHandler):
                 contact["remark"] = item.get("remark", "")
                 #contact["type"] = item.get("type", "")
                 contact["star"] = item.get("star", "")
-                c_userinfo = yield mickey.userfetcher.getcontact(c_id)
+                c_userinfo = yield mickey.userfetcher.getcontact(c_id, token)
                 if c_userinfo:
                     contact["nickname"] = c_userinfo.get("commName", "")
                     contact["sign"] = c_userinfo.get("sign", "")

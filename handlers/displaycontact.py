@@ -19,11 +19,12 @@ class DispayContactHandler(BaseHandler):
         data      = json.loads(self.request.body.decode("utf-8"))
         userid    = data.get("id", "invalid")
         contactid = data.get("contactid", "invalid")
+        token     = self.request.headers.get("Authorization", "")
 
         #begin to logging user
         logging.info("%s begin to display %s" % (userid, contactid))
 
-        res_body = yield mickey.userfetcher.getcontact(contactid)
+        res_body = yield mickey.userfetcher.getcontact(contactid, token)
 
         if not res_body:
             self.set_status(404)

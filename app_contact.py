@@ -31,6 +31,7 @@ from handlers.bindcontacttodevice import BindContactToDeviceHandler
 from handlers.acceptbind import AcceptBindHandler
 from handlers.scanbindtodevice import ScanBindToDeviceHandler
 from handlers.unbinddevice import UnBindDeviceHandler
+from handlers.displayuser import DispayUserHandler
 
 import mickey.publish
 
@@ -57,7 +58,8 @@ class Application(tornado.web.Application):
                   (r"/contact/device/addbinders", BindContactToDeviceHandler),
                   (r"/contact/device/acceptbind", AcceptBindHandler),
                   (r"/contact/device/scanbind", ScanBindToDeviceHandler),
-                  (r"/contact/device/unbind", UnBindDeviceHandler)
+                  (r"/contact/device/unbind", UnBindDeviceHandler),
+                  (r"/contact/user/display", DispayUserHandler)
                  ]
         self.db = motor.MotorClient(options.mongo_url).contact
         self.publish = mickey.publish

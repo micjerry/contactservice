@@ -19,6 +19,7 @@ class AcceptBindHandler(BaseHandler):
     def post(self):
         coll = self.application.db.users
         publish = self.application.publish
+        token = self.request.headers.get("Authorization", "")
 
         #get parameters of request
         data         = json.loads(self.request.body.decode("utf-8"))
@@ -50,12 +51,14 @@ class AcceptBindHandler(BaseHandler):
             logging.error("invalid device id")
             self.set_status(404)
             self.finish()
+            return
 
         binders = modresult.get("binders", [])
         if not self.p_userid in binders:
             logging.error("you are not invited")
             self.set_status(403)
             self.finish()
+            return
 
         already_binders = yield libcontact.get_binders(deviceid)
 
@@ -77,8 +80,8 @@ class AcceptBindHandler(BaseHandler):
 
         username = ""
         devicename = ""
-        res_device = yield mickey.userfetcher.getcontact(deviceid)
-        res_user = yield mickey.userfetcher.getcontact(self.p_userid)
+        res_device = yield mickey.userfetcher.getcontact(deviceid, token)
+        res_user = yield mickey.userfetcher.getcontact(self.p_userid, token)
 
         if res_user:
             username = res_user.get("commName", "")

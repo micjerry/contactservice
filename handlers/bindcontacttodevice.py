@@ -24,6 +24,7 @@ class BindContactToDeviceHandler(BaseHandler):
         deviceid     = data.get("deviceid", "")
         comment      = data.get("comment", "")
         contacts     = data.get("contacts", [])
+        token = self.request.headers.get("Authorization", "")
 
         logging.info("begin to handle add contact request, deviceid = %s, contact = %r" % (deviceid, contacts))
         
@@ -60,8 +61,8 @@ class BindContactToDeviceHandler(BaseHandler):
         # fetch user and device info
         username = ""
         devicename = ""
-        res_device = yield mickey.userfetcher.getcontact(deviceid)
-        res_user = yield mickey.userfetcher.getcontact(self.p_userid)
+        res_device = yield mickey.userfetcher.getcontact(deviceid, token)
+        res_user = yield mickey.userfetcher.getcontact(self.p_userid, token)
 
         if res_device:
             devicename = res_device.get("commName", "")
