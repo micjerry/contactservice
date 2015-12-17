@@ -50,6 +50,7 @@ class DispayContactHandler(BaseHandler):
         userinfo["contactInfos"] = res_body.get("contactInfos", [])
         userinfo["type"] = res_body.get("type", "")
         userinfo["sign"] = res_body.get("sign", "")
+        userinfo["name"] = res_body.get("name", "")
         userinfo["sex"] = res_body.get("sex", 0)
 
         if res_body.get("type", "") == "TERMINAL":

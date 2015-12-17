@@ -53,6 +53,7 @@ class ListContactHandler(BaseHandler):
                     contact["nickname"] = c_userinfo.get("commName", "")
                     contact["sign"] = c_userinfo.get("sign", "")
                     contact["type"] = c_userinfo.get("type", "")
+                    contact["name"] = c_userinfo.get("name", "")
                     
                 rs_contacts.append(contact)
 
