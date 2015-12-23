@@ -84,13 +84,18 @@ class AddContactHandler(BaseHandler):
 
             if contactid in [x.get("id", "") for x in user.get("contacts", [])]:
                 logging.info("user = %s was already a friend" % contactid)
+                body["desc"] = self.ADDTYPE_OK
+                self.write(body)
                 self.finish()
                 return
 
             #if already add the contact, but reply was not received, notify contact again, Hi guy, accept my friendship
             if contactid in [x.get("id", "") for x in user.get("appendings", [])]:
                 logging.info("user = %s was already a pending friend" % contactid)
+                body["desc"] = self.ADDTYPE_AUTH
+                notify["desc"] = self.ADDTYPE_AUTH
                 publish.publish_one(contactid, notify)
+                self.write(body)
                 self.finish()
                 return
                 
