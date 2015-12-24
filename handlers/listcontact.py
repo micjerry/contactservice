@@ -21,7 +21,7 @@ class ListContactHandler(BaseHandler):
         server_flag = None
         token = self.request.headers.get("Authorization", "")
 
-        logging.info("list contact for %s" % userid)
+        logging.info("list contact for %s flag = %s" % (userid, client_flag))
 
         if self.p_userid != userid:
             logging.error("you can not query other user info")
