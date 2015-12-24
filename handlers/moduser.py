@@ -13,7 +13,8 @@ class ModUserHandler(BaseHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def post(self):
-        publish = self.application.publish
+        coll      = self.application.db.users
+        publish   = self.application.publish
         data      = json.loads(self.request.body.decode("utf-8"))
         userid    = data.get("id", "")
         userinfo  = data.get("user", "")
@@ -48,9 +49,21 @@ class ModUserHandler(BaseHandler):
         notify = {
           "name":"mx.contact.user_updated",
           "userid":userid,
+          "modby":self.p_userid,
           "pub_type": "any",
           "nty_type": "app"
         }
 
-        publish.broadcast_one(userid, notify)
+        result = yield coll.find_one({"id":userid})
+        receivers = None
+        if result:
+            receivers = [x.get("id", "") for x in result.get("contacts", [])]
+
+        if receivers:
+            receivers.append(userid)
+        else:
+            receivers = [userid]
+
+        publish.publish_multi(receivers, notify)
+
         self.finish()
