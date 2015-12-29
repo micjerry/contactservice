@@ -20,7 +20,7 @@ class ModUserHandler(BaseHandler):
         userinfo  = data.get("user", "")
 
         #begin to logging user
-        logging.info("%s begin to mod" % (userid))
+        logging.info("%s begin to mod %r" % (userid, userinfo))
         if not userid or not userinfo:
             self.set_status(403)
             self.finish()
