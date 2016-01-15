@@ -8,6 +8,7 @@ import logging
 
 from mickey.basehandler import BaseHandler
 import mickey.users
+import mickey.tp
 
 class ModUserHandler(BaseHandler):
     @tornado.web.asynchronous
@@ -45,6 +46,21 @@ class ModUserHandler(BaseHandler):
             self.set_status(500)
             self.finish()
             return
+
+        #update uerinfo of third party
+        tpuserinfo = {"id":userid}
+        username = userinfo.get("name", "")
+        nickname = userinfo.get("nickname", "")
+        sign = userinfo.get("sign", "")
+        
+        if username:
+            tpuserinfo["name"] = username
+        if nickname:
+            tpuserinfo["nickname"] = nickname
+        if sign:
+            tpuserinfo["remark"] = sign
+
+        mickey.tp.moduser(tpuserinfo)
 
         notify = {
           "name":"mx.contact.user_updated",
