@@ -55,6 +55,8 @@ class AddContactHandler(BaseHandler):
 
         if contact_type != self.USERTYPE_TERMINAL and contact_type != self.USERTYPE_PERSON:
             logging.error("invalid contact type")
+            self.set_status(403)
+            self.finish()
             return
 
         #check parameters        
