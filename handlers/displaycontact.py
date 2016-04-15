@@ -32,8 +32,8 @@ def transfertouserid(chatid):
         if item.isdigit():
             id_part = id_part + item
 
-    return id_part
-    #return formatuserid(id_part)
+    #return id_part
+    return formatuserid(id_part)
 
 class DispayContactHandler(BaseHandler):
     @tornado.web.asynchronous
