@@ -10,19 +10,9 @@ from mickey.mysqlcon import get_mysqlcon
 import mickey.userfetcher
 from mickey.basehandler import BaseHandler
 
-from mickey.commonconf import SINGLE_MODE
-if SINGLE_MODE:
-    import redis
-    _sentinel         = redis.StrictRedis(host='localhost', port=6379, db=0, socket_timeout=5.0)
-    _sentinel_salve   = _sentinel
-    _sentinel_master  = _sentinel
-else:
-    from redis.sentinel import Sentinel
-    _sentinel = Sentinel([('localhost', 26379)], socket_timeout = 1)
-    _sentinel_salve = _sentinel.slave_for('master', socket_timeout = 0.5)
-    _sentinel_master = _sentinel.master_for('master', socket_timeout = 0.5)
+from mickey.commonconf import REDIS_FETCH_RETRY
+import mickey.redis
 
-_retry_flag = 'fetchdevice_%s'
 
 _getdevice_sql = """
   SELECT sn FROM devices WHERE order_tag = %s;
@@ -110,28 +100,20 @@ class FetchDeviceHandler(BaseHandler):
 
     def get_retry(self, userid):
         retry_times = 0
-        retrys = None
-        try:
-            retrys = _sentinel_salve.get(_retry_flag % userid)
-        except Exception as e:
-            logging.error("can not get cached information {0}".format(e))
+        retrys = mickey.redis.read_from_redis(REDIS_FETCH_RETRY + userid)
 
         if retrys:
-            retry_times = int(retrys.decode("utf-8"))
+            retry_times = int(retrys)
 
         return retry_times
 
     def set_retry(self, userid, retry_times):
-        try:
-            rs_key = _retry_flag % userid
-            if retry_times == 0:
-                _sentinel_master.delete(rs_key)
-                return
-            else:
-                _sentinel_master.set(rs_key, str(retry_times))
-                _sentinel_master.expire(rs_key, 900)
-        except Exception as e:
-            _logger.error("can not cach user information {0}".format(e))
+        rs_key = REDIS_FETCH_RETRY + userid
+        if retry_times == 0:
+            mickey.redis.remove_from_redis(rs_key)
+            return
+        else:
+            mickey.redis.write_to_redis(rs_key, str(retry_times), expire = 900)
 
     @tornado.gen.coroutine
     def get_devices(self, order_tag):
