@@ -79,6 +79,7 @@ class DispayContactHandler(BaseHandler):
         userinfo["remark"] = remark
         userinfo["star"] = star
         userinfo["nickname"] = res_body.get("commName", "")
+        userinfo["phoneNumber"] = res_body.get("phoneNumber", "")
         userinfo["contactInfos"] = res_body.get("contactInfos", [])
         userinfo["type"] = res_body.get("type", "")
         userinfo["sign"] = res_body.get("sign", "")
