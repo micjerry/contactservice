@@ -57,7 +57,7 @@ class ListContactHandler(BaseHandler):
                     contact["type"] = c_userinfo.get("type", "")
                     contact["name"] = c_userinfo.get("name", "")
 
-                tp_userid = yield mickey.users.get_tpuserid_o(c_id)
+                tp_userid = yield mickey.users.get_tpuserid_of_contact(c_id)
                 contact["tp_userid"] = tp_userid
                     
                 rs_contacts.append(contact)
