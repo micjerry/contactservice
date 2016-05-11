@@ -13,10 +13,12 @@ class MarkContactHandler(BaseHandler):
     @tornado.gen.coroutine
     def post(self):
         coll = self.application.db.users
+        publish = self.application.publish
         data = json.loads(self.request.body.decode("utf-8"))
         userid = data.get("id", "invalid")
         contactid = data.get("contactid", "invalid")
         remark = data.get("remark", "")
+        
         flag = str(uuid.uuid4()).replace('-', '_')
 
         logging.info("user %s begin to mark contact %s as %s" % (userid, contactid, remark))
@@ -46,6 +48,15 @@ class MarkContactHandler(BaseHandler):
                        )
             if modresult:
                 self.set_status(200)
+
+                #notify user self
+                notify = {
+                  "name":"mx.contact.self_mark_contact",
+                  "userid":contactid,
+                  "remark":"remark"
+                }
+                publish.publish_one(self.p_userid, notify)
+
             else:
                 logging.info("mark failed")
                 self.set_status(500)

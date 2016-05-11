@@ -61,6 +61,16 @@ class RmvContactHandler(BaseHandler):
                 }
                 publish.publish_one(contactid, notify)
 
+                #notify user self
+                self_notify = {
+                 "name": "mx.contact.self_rmv_contact",
+                 "userid": contactid,
+                 "pub_type": "any",
+                 "nty_type": "app"
+                }
+
+                publish.publish_one(userid, self_notify)
+
         if result:
             self.set_status(200)
             

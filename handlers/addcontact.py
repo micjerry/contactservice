@@ -10,6 +10,7 @@ import uuid
 from mickey.basehandler import BaseHandler
 import tornado_mysql
 from mickey.mysqlcon import get_mysqlcon
+import mickey.userfetcher
 
 _checkdevice_sql = """
   SELECT device_userID FROM deviceusermap WHERE device_userID = %s AND userEntity_userID = %s;
@@ -150,6 +151,21 @@ class AddContactHandler(BaseHandler):
 
             # notify the user who was added as a friend
             publish.publish_one(contactid, notify)
+
+            # notify user self
+            self_notify = {
+              "name":"mx.contact.self_add_contact",
+              "userid":contactid
+            }
+
+            c_userinfo = yield mickey.userfetcher.getcontact(contactid, None)
+            if c_userinfo:
+                self_notify["nickname"] = c_userinfo.get("commName", "")
+                self_notify["usertype"] = c_userinfo.get("type", "")
+                
+
+            publish.publish_one(userid, self_notify)
+
             body["contactid"] = contactid
             self.write(body)
             self.finish()
