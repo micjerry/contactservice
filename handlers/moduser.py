@@ -70,16 +70,6 @@ class ModUserHandler(BaseHandler):
           "nty_type": "app"
         }
 
-        result = yield coll.find_one({"id":userid})
-        receivers = None
-        if result:
-            receivers = [x.get("id", "") for x in result.get("contacts", [])]
-
-        if receivers:
-            receivers.append(userid)
-        else:
-            receivers = [userid]
-
-        publish.publish_multi(receivers, notify)
+        publish.broadcast_one(userid, notify)
 
         self.finish()
