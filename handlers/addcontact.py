@@ -158,6 +158,8 @@ class AddContactHandler(BaseHandler):
               "userid":contactid
             }
 
+            self_notify["desc"] = notify.get("desc", "")
+
             c_userinfo = yield mickey.userfetcher.getcontact(contactid, None)
             if c_userinfo:
                 self_notify["nickname"] = c_userinfo.get("commName", "")

@@ -8,7 +8,10 @@ import logging
 
 import motor
 import mickey.userfetcher
+
 from mickey.basehandler import BaseHandler
+from mickey.users import get_devicesn
+
 import libcontact
 
 _USER_FORMAT = "10010000000"
@@ -44,7 +47,6 @@ class DispayContactHandler(BaseHandler):
         userid    = data.get("id", "invalid")
         contactid = data.get("contactid", "")
         tp_userid = data.get("tp_userid", "")
-        token     = self.request.headers.get("Authorization", "")
 
         #begin to logging user
         logging.info("%s begin to display %s" % (userid, contactid))
@@ -56,7 +58,8 @@ class DispayContactHandler(BaseHandler):
             self.finish()
             return
 
-        res_body = yield mickey.userfetcher.getcontact(contactid, token)
+        #force to get the data from database
+        res_body = yield mickey.userfetcher.getcontact(contactid, None, forcedb = True)
 
         if not res_body:
             self.set_status(404)
@@ -99,6 +102,21 @@ class DispayContactHandler(BaseHandler):
             userinfo["admin"] = admin_info
             userinfo["users"] = users
 
+            admin_user = False
+            if admin_info and str(admin_info.get("id", "")) == userid:
+                admin_user = True
+
+            if not admin_user and users:
+                for item in users:
+                    if str(item.get("id", "")) == userid:
+                        admin_user = True
+                        break
+
+            if admin_user:   
+                snnumber = yield get_devicesn(contactid)
+                if snnumber:
+                    userinfo["sn"] = snnumber
+            
         self.write(userinfo)
 
         self.finish()
