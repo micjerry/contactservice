@@ -60,24 +60,25 @@ class AcceptBindHandler(BaseHandler):
             self.finish()
             return
 
+        #get current binders
         already_binders = yield libcontact.get_binders(deviceid)
 
-        phone = yield libcontact.get_bindphone(self.p_userid)
-        if not phone:
-            logging.error("forbiden no right")
-            self.set_status(404)
-            self.finish()
-            return
 
-        result = yield libcontact.add_bind(deviceid, phone)
+        #do bind
+        bind_rst = yield mickey.userfetcher.bindboxtouser(self.p_userid, deviceid, 'USER')
 
-        if not result:
+        if bind_rst != 200:
             logging.error("bind failed")
             self.set_status(500)
             self.finish()
             return
 
+        if not already_binders:
+            self.set_status(200)
+            self.finish()
+            return
 
+        #send notify to the exist binders
         username = ""
         devicename = ""
         res_device = yield mickey.userfetcher.getcontact(deviceid, token)
@@ -101,10 +102,7 @@ class AcceptBindHandler(BaseHandler):
               "msg_type": "other"
             }
 
-        if already_binders:
-            publish.publish_multi(already_binders, notify)
-
-
+        publish.publish_multi(already_binders, notify)
 
         self.set_status(200)
         self.finish()

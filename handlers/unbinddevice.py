@@ -56,11 +56,11 @@ class UnBindDeviceHandler(BaseHandler):
         binders = yield libcontact.get_binders(deviceid)
 
         for item in contacts:
-            phone = yield libcontact.get_bindphone(item)
-            if not phone:
+            unbind_rst = yield mickey.userfetcher.removebind(item, deviceid, 'USER')
+            if unbind_rst != 200:
+                logging.error("unbind failed user %s device %s" % (item, deviceid))
                 continue
 
-            yield libcontact.un_bind(deviceid, phone)
             res_user = yield mickey.userfetcher.getcontact(item, token)
             if res_user:
                 username = res_user.get("commName", "")

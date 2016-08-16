@@ -74,21 +74,16 @@ class BindContactToDeviceHandler(BaseHandler):
 
             already_binders = yield libcontact.get_binders(deviceid)
 
-            phone = yield libcontact.get_bindphone(self.p_userid)
-            if not phone:
-                logging.error("get phone failed")
-                self.set_status(500)
-                self.finish()
-                return
+            #bind user to device
+            bind_rst = yield mickey.userfetcher.bindboxtouser(self.p_userid, deviceid, 'USER')
 
-            result = yield libcontact.add_bind(deviceid, phone)
-
-            if not result:
+            if bind_rst != 200:
                 logging.error("bind failed")
                 self.set_status(500)
                 self.finish()
                 return
 
+            #send notify to other binders
             notify = {
               "name": "mx.contact.newbinder",
               "deviceid": deviceid,

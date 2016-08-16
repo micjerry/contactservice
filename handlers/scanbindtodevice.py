@@ -41,16 +41,9 @@ class ScanBindToDeviceHandler(BaseHandler):
             self.finish()
             return
 
-        phone = yield libcontact.get_bindphone(self.p_userid)
-        if not phone:
-            logging.error("forbiden no right")
-            self.set_status(500)
-            self.finish()
-            return
+        bind_rst = yield mickey.userfetcher.bindboxtouser(self.p_userid, deviceid, 'USER')
 
-        result = yield libcontact.add_bind(deviceid, phone)
-
-        if not result:
+        if bind_rst != 200:
             logging.error("bind failed")
             self.set_status(500)
             self.finish()
