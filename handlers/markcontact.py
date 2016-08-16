@@ -53,7 +53,7 @@ class MarkContactHandler(BaseHandler):
                 notify = {
                   "name":"mx.contact.self_mark_contact",
                   "userid":contactid,
-                  "remark":"remark"
+                  "remark":remark
                 }
                 publish.publish_one(self.p_userid, notify)
 

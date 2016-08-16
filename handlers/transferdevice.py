@@ -9,10 +9,6 @@ from mickey.mysqlcon import get_mysqlcon
 import mickey.userfetcher
 from mickey.basehandler import BaseHandler
 
-_transfer_sql = """
-  UPDATE deviceusermap set userEntity_userID = %s WHERE device_userID = %s AND userEntity_userID = %s AND role = %s;
-"""
-
 class TransferDeviceHandler(BaseHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
@@ -28,9 +24,16 @@ class TransferDeviceHandler(BaseHandler):
             self.finish()
             return
 
-        result = yield self.transfer_devices(devices, userid, self.p_userid)
+        ever_failed = False
+
+        for item in devices:
+            transfer_rst = yield mickey.userfetcher.transferbind(self.p_userid, item, 'ADMIN', userid)
+            if transfer_rst != 200:
+                logging.error("transfer device %s to %s by %s failed" % (item, userid, self.p_userid))
+                ever_failed = True
+                continue
         
-        if not result:
+        if ever_failed == True:
             logging.error("transfer failed remove failure")
             self.set_status(500)
             self.finish()
@@ -38,26 +41,3 @@ class TransferDeviceHandler(BaseHandler):
 
         self.set_status(200)
         self.finish()
-
-    @tornado.gen.coroutine
-    def transfer_devices(self, devices, new_userid, old_userid):
-        conn = yield get_mysqlcon('mxsuser')
-        if not conn:
-            logging.error("connect to mysql failed")
-            return False
-
-        try:
-            cur = conn.cursor()
-            for item in devices:
-                yield cur.execute(_transfer_sql, (new_userid, item, old_userid, 'ADMIN'))
-
-            cur.close()
-            yield conn.commit()
-        except Exception as e:
-            logging.error("oper db failed {0}".format(e))
-            return False
-        finally:
-            conn.close()
-
-        return True
-

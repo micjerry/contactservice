@@ -14,6 +14,7 @@ class ListDeviceHandler(BaseHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def post(self):
+        model_config = self.application.model_config
         data = json.loads(self.request.body.decode("utf-8"))
         userid = data.get("id", "invalid")
 
@@ -36,7 +37,9 @@ class ListDeviceHandler(BaseHandler):
 
                 sn_id = item.get("sn", "")
                 device["sn"] = sn_id
-                device["model"] = "M1"
+                sn_flag = sn_id[0:2]
+                device["model"] = model_config.get(sn_flag, "M1")
+
                 c_deviceinfo = yield libcontact.fetch_device(sn_id)
                 if c_deviceinfo:
                     device["address"] = c_deviceinfo.get("rec_address", "")
@@ -67,7 +70,8 @@ class ListDeviceHandler(BaseHandler):
 
                 sn_id = item.get("sn", "")
                 device["sn"] = sn_id
-                device["model"] = "M1"
+                sn_flag = sn_id[0:2]
+                device["model"] = model_config.get(sn_flag, "M1")
                 c_deviceinfo = yield libcontact.fetch_device(sn_id)
                 if c_deviceinfo:
                     device["address"] = c_deviceinfo.get("rec_address", "")

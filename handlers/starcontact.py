@@ -13,6 +13,7 @@ class StarContactHandler(BaseHandler):
     @tornado.gen.coroutine
     def post(self):
         coll = self.application.db.users
+        publish = self.application.publish
         data = json.loads(self.request.body.decode("utf-8"))
         userid = data.get("id", "invalid")
         contactid = data.get("contactid", "invalid")
@@ -46,6 +47,14 @@ class StarContactHandler(BaseHandler):
                        )
             if modresult:
                 self.set_status(200)
+
+                notify = {
+                  "name":"mx.contact.self_star_contact",
+                  "userid": contactid,
+                  "stared": stared
+                }
+
+                publish.publish_one(userid, notify)
             else:
                 logging.info("star failed")
                 self.set_status(500)

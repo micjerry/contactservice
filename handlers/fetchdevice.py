@@ -22,10 +22,6 @@ _getdevice_userid_sql = """
   SELECT userEntity_userID FROM account WHERE name IN %s;
 """
 
-_fetch_sql = """
-  INSERT INTO deviceusermap(role, device_userID, userEntity_userID) VALUES(%s, %s, %s);
-"""
-
 _unset_sql = """
   UPDATE devices SET order_tag = %s, fetchby = %s WHERE order_tag = %s;
 """
@@ -81,9 +77,15 @@ class FetchDeviceHandler(BaseHandler):
         self.set_retry(self.p_userid, 0)        
         
         #fetch devices
-        fetch_result = yield self.fetch_devices(self.p_userid, devices)
-        if not fetch_result:
-            logging.error("fetch devices failed")
+        ever_failed = False
+        for item in devices:
+            response = yield mickey.userfetcher.bindboxtouser(self.p_userid, item, 'ADMIN')
+            if response != 200:
+                logging.error("bind device failed user %s device %s" % (self.p_userid, item))
+                ever_failed = True
+
+        if ever_failed == True:
+            logging.error("fetch device failed")
             self.set_status(500)
             self.finish()
             return
@@ -168,28 +170,6 @@ class FetchDeviceHandler(BaseHandler):
             return []
         finally:
             conn.close()
-
-    @tornado.gen.coroutine
-    def fetch_devices(self, userid, devices):
-        conn = yield get_mysqlcon('mxsuser')
-        if not conn:
-            logging.error("connect to mysql failed")
-            return False
-
-        try:
-            cur = conn.cursor()
-            for item in devices:
-                yield cur.execute(_fetch_sql, ('ADMIN', item, userid))
-
-            cur.close()
-            yield conn.commit()
-        except Exception as e:
-            logging.error("oper db failed {0}".format(e))
-            return False
-        finally:
-            conn.close()
-
-        return True
 
 
     @tornado.gen.coroutine

@@ -35,6 +35,7 @@ class FetchOrderHandler(BaseHandler):
     @tornado.gen.coroutine
     def post(self):
         coll = self.application.db.users
+        model_config = self.application.model_config
         data = json.loads(self.request.body.decode("utf-8"))
         order_tag = data.get("order_seq", "").lower()
         logging.info("%s fetch device %s" % (self.p_userid, order_tag))
@@ -85,7 +86,10 @@ class FetchOrderHandler(BaseHandler):
 
         #add model info
         for item in devices:
-            item["model"] = "M1"
+            sn_number = item.get("sn","")
+            sn_flag = sn_number[0:2]
+            
+            item["model"] = model_config.get(sn_flag, "M1")
 
         #get total count info
         total_count = {}

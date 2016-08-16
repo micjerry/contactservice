@@ -8,6 +8,7 @@ import tornado.ioloop
 import tornado.web
 import tornado.gen
 import tornado.options
+import json
 import logging
 import logging.handlers
 
@@ -40,6 +41,7 @@ from tornado.options import define, options
 define("port", default=8000, help="run on the given port", type=int)
 define("cmd", default="run", help="Command")
 define("conf", default="/etc/mx_apps/app_contact/app_contact_is1.conf", help="Server config")
+define("modelfile", default="/etc/mx_apps/app_contact/model.conf", help="Model config")
 define("pidfile", default="/var/run/app_contact_is1.pid", help="Pid file")
 define("logfile", default="/var/log/app_contact_is1", help="Log file")
 
@@ -65,7 +67,16 @@ class Application(tornado.web.Application):
                  ]
         self.db = motor.MotorClient(options.mongo_url).contact
         self.publish = mickey.publish
+        self.model_config = self.load_modelconfig(options.modelfile)
+
         tornado.web.Application.__init__(self, handlers, debug=True)
+
+    def load_modelconfig(self, modelconfig_path):
+        model_config = {"01":"M1"}
+        with open(modelconfig_path) as model_file:
+            model_config = json.load(model_file)
+            
+        return model_config
  
 class MickeyDamon(Daemon):
     def run(self):
