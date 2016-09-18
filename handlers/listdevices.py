@@ -55,10 +55,7 @@ class ListDeviceHandler(BaseHandler):
 
                 rs_devices.append(device)
 
-        user_phone = yield libcontact.get_bindphone(self.p_userid)
-        use_devices = None
-        if user_phone:
-            use_devices = yield libcontact.get_myusedevices(user_phone)
+        use_devices = yield libcontact.get_myusedevices(self.p_userid)
 
         rs_usedevices = []
         if use_devices:

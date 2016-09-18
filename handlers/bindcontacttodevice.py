@@ -54,7 +54,7 @@ class BindContactToDeviceHandler(BaseHandler):
         result = yield libcontact.check_bindcount(deviceid, len(contacts))
         if not result:
             logging.error("forbiden no right")
-            self.set_status(423)
+            self.set_status(423, reason = "too many user was bound")
             self.finish()
             return
 

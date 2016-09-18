@@ -34,7 +34,7 @@ _queryadmin_sql = """
 
 _queryusers_sql = """
   SELECT c.commName AS nickname, c.userID AS id FROM deviceusermap a JOIN account b LEFT JOIN userentity c ON (b.userEntity_userID = c.userID) WHERE
-    a.searchKey = b.name AND a.device_userID = %s AND b.type = %s AND a.role = %s;
+    a.userEntity_userID = b.userEntity_userID AND a.device_userID = %s AND b.type = %s AND a.role = %s;
 """
 
 _getmydevice_sql = """
@@ -45,7 +45,7 @@ _getmydevice_sql = """
 
 _getmyusedevice_sql = """
     SELECT b.name as sn, c.commName, c.userID, c.name FROM deviceusermap a JOIN account b LEFT JOIN userentity c ON (a.device_userID = c.userID) WHERE a.device_userID = b.userEntity_userID  
-      AND a.searchKey = %s AND a.role = %s AND b.type = %s;
+      AND a.userEntity_userID = %s AND a.role = %s AND b.type = %s;
 """
 
 _getdevice_sql = """

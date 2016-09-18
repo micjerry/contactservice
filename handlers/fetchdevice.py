@@ -8,9 +8,11 @@ import tornado_mysql
 from mickey.mysqlcon import get_mysqlcon
 
 import mickey.userfetcher
+import mickey.redis
+
 from mickey.basehandler import BaseHandler
 
-from mickey.commonconf import REDIS_FETCH_RETRY
+from mickey.commonconf import REDIS_FETCH_RETRY, REDIS_CLUSTER_LOCK
 import mickey.redis
 
 
@@ -66,12 +68,22 @@ class FetchDeviceHandler(BaseHandler):
                 self.finish()
                 return
 
+        lockname = REDIS_CLUSTER_LOCK + order_tag
+        cluster_lock = mickey.redis.create_cluster_lock(lockname)
+
+        if not cluster_lock:
+            logging.error("multi fetch %s" % order_tag)
+            self.set_status(403)
+            self.finish()
+            return
+
         devices = yield self.get_devices(order_tag)
         if not devices:
             self.set_retry(self.p_userid, retry_times + 1)
             logging.error("no device to fetch %s" % order_tag)
             self.set_status(403)
             self.finish()
+            mickey.redis.release_cluster_lock(lockname, cluster_lock)
             return
 
         self.set_retry(self.p_userid, 0)        
@@ -88,6 +100,7 @@ class FetchDeviceHandler(BaseHandler):
             logging.error("fetch device failed")
             self.set_status(500)
             self.finish()
+            mickey.redis.release_cluster_lock(lockname, cluster_lock)
             return
 
         #unset devices
@@ -96,8 +109,11 @@ class FetchDeviceHandler(BaseHandler):
             logging.error("unset flag failed")
             self.set_status(500)
             self.finish()
+            mickey.redis.release_cluster_lock(lockname, cluster_lock)
             return
 
+
+        mickey.redis.release_cluster_lock(lockname, cluster_lock)
         self.finish()
 
     def get_retry(self, userid):
