@@ -22,8 +22,9 @@ class AcceptBindHandler(BaseHandler):
         token = self.request.headers.get("Authorization", "")
 
         #get parameters of request
-        data         = json.loads(self.request.body.decode("utf-8"))
-        deviceid     = data.get("deviceid", "")
+        if not self._decoded_reqbody:
+            self._decoded_reqbody = json.loads(self.request.body.decode("utf-8"))
+        deviceid     = self._decoded_reqbody.get("deviceid", "")
 
         logging.info("begin to accept bind request, user = %s, device = %s" % (self.p_userid, deviceid))
         

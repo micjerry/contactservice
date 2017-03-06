@@ -7,6 +7,7 @@ import logging
 import tornado_mysql
 
 import mickey.userfetcher
+import mickey.users
 from mickey.basehandler import BaseHandler
 import libcontact
 
@@ -31,9 +32,13 @@ class ListDeviceHandler(BaseHandler):
         if devices:
             for item in devices:
                 device = {}
-                device["id"] = str(item.get("userID", ""))
+                userid = str(item.get("userID", ""))
+                if not userid:
+                    continue
+                device["id"] = userid
                 device["nickname"] = item.get("commName", "")
                 device["name"] = item.get("name", "")
+                device["last_register"] = yield mickey.users.get_logintime_of_contact(userid)
 
                 sn_id = item.get("sn", "")
                 device["sn"] = sn_id
@@ -61,9 +66,13 @@ class ListDeviceHandler(BaseHandler):
         if use_devices:
             for item in use_devices:
                 device = {}
-                device["id"] = str(item.get("userID", ""))
+                userid = str(item.get("userID", ""))
+                if not userid:
+                    continue
+                device["id"] = userid
                 device["nickname"] = item.get("commName", "")
                 device["name"] = item.get("name", "")
+                device["last_register"] = yield mickey.users.get_logintime_of_contact(userid)
 
                 sn_id = item.get("sn", "")
                 device["sn"] = sn_id

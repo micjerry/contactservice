@@ -29,18 +29,26 @@ class AddContactHandler(BaseHandler):
         publish = self.application.publish
 
         #get parameters of request
-        data         = json.loads(self.request.body.decode("utf-8"))
-        userid       = data.get("id", "invalid")
-        contactid    = data.get("contactid", "invalid")
-        usertype     = data.get("usertype", self.USERTYPE_PERSON).upper()
-        contact_type = data.get("type", self.USERTYPE_PERSON).upper()
-        user_nick    = data.get("nickname", "")
-        contact_nick = data.get("contactnick", "")
-        comment      = data.get("comment", "")
-        addtype      = data.get("addtype", "").lower()
+        if not self._decoded_reqbody:
+            self._decoded_reqbody = json.loads(self.request.body.decode("utf-8"))
+
+        userid       = self._decoded_reqbody.get("id", "invalid")
+        contactid    = self._decoded_reqbody.get("contactid", "invalid")
+        usertype     = self._decoded_reqbody.get("usertype", self.USERTYPE_PERSON).upper()
+        contact_type = self._decoded_reqbody.get("type", self.USERTYPE_PERSON).upper()
+        user_nick    = self._decoded_reqbody.get("nickname", "")
+        contact_nick = self._decoded_reqbody.get("contactnick", "")
+        comment      = self._decoded_reqbody.get("comment", "")
+        addtype      = self._decoded_reqbody.get("addtype", "").lower()
         change_flag  = str(uuid.uuid4()).replace('-', '_')
 
         logging.info("begin to handle add contact request, userid = %s contact = %s type = %s nick = %s cnick = %s" % (userid, contactid, contact_type, user_nick, contact_nick))
+
+        if not isinstance(userid, str) or not isinstance(contactid, str) or not isinstance(usertype, str) or not isinstance(contact_type, str):
+            logging.error("invalid parameter")
+            self.set_status(403)
+            self.finish()
+            return
 
         if self.p_userid != userid:
             logging.error("forbiden you can not change other user")
@@ -124,7 +132,7 @@ class AddContactHandler(BaseHandler):
 
             is_mydevice = False
             if contact_type == self.USERTYPE_TERMINAL:
-                is_mydevice = yield self.check_device(contactid, userid)
+                is_mydevice = yield self.check_device(userid, contactid)
 
             is_bindadd = True if addtype == "bind" else False
 

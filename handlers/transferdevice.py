@@ -13,6 +13,7 @@ class TransferDeviceHandler(BaseHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def post(self):
+        publish = self.application.publish
         data = json.loads(self.request.body.decode("utf-8"))
         devices = data.get("devices", [])
         userid = data.get("userid", "")
@@ -38,6 +39,17 @@ class TransferDeviceHandler(BaseHandler):
             self.set_status(500)
             self.finish()
             return
+
+        notify = {
+              "name": "mx.contact.device_transfer",
+              "pub_type": "any",
+              "nty_type": "app",
+              "msg_type": "other",
+              "userid": self.p_userid,
+              "devices" : devices
+            }
+
+        publish.publish_one(userid, notify)
 
         self.set_status(200)
         self.finish()

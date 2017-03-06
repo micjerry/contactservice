@@ -34,6 +34,9 @@ from handlers.scanbindtodevice import ScanBindToDeviceHandler
 from handlers.unbinddevice import UnBindDeviceHandler
 from handlers.displayuser import DispayUserHandler
 from handlers.moduser import ModUserHandler
+from handlers.nametransfer import NameTransferHandler
+
+from filters.domain_filter import DomainFilter
 
 import mickey.publish
 
@@ -47,6 +50,11 @@ define("logfile", default="/var/log/app_contact_is1", help="Log file")
 
 class Application(tornado.web.Application):
     def __init__(self):
+
+        settings = {
+          "compress_response":True
+        }
+
         handlers=[(r"/contact/list/contacts", ListContactHandler),
                   (r"/contact/add/friend", AddContactHandler),
                   (r"/contact/display/detail", DispayContactHandler),
@@ -63,13 +71,16 @@ class Application(tornado.web.Application):
                   (r"/contact/device/scanbind", ScanBindToDeviceHandler),
                   (r"/contact/device/unbind", UnBindDeviceHandler),
                   (r"/contact/user/display", DispayUserHandler),
-                  (r"/contact/user/mod", ModUserHandler)
+                  (r"/contact/user/mod", ModUserHandler),
+                  (r"/contact/user/queryname", NameTransferHandler)
                  ]
         self.db = motor.MotorClient(options.mongo_url).contact
         self.publish = mickey.publish
         self.model_config = self.load_modelconfig(options.modelfile)
+        self.filters = []
+        self.filters.append(DomainFilter())
 
-        tornado.web.Application.__init__(self, handlers, debug=True)
+        tornado.web.Application.__init__(self, handlers, **settings)
 
     def load_modelconfig(self, modelconfig_path):
         model_config = {"01":"M1"}

@@ -20,10 +20,12 @@ class BindContactToDeviceHandler(BaseHandler):
         publish = self.application.publish
 
         #get parameters of request
-        data         = json.loads(self.request.body.decode("utf-8"))
-        deviceid     = data.get("deviceid", "")
-        comment      = data.get("comment", "")
-        contacts     = data.get("contacts", [])
+        if not self._decoded_reqbody:
+            self._decoded_reqbody = json.loads(self.request.body.decode("utf-8"))
+
+        deviceid     = self._decoded_reqbody.get("deviceid", "")
+        comment      = self._decoded_reqbody.get("comment", "")
+        contacts     = self._decoded_reqbody.get("contacts", [])
         token = self.request.headers.get("Authorization", "")
 
         logging.info("begin to handle add contact request, deviceid = %s, contact = %r" % (deviceid, contacts))

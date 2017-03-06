@@ -24,7 +24,7 @@ _querybindphone_sql = """
 """
 
 _querybinduser_sql = """
-  SELECT a.userEntity_userID FROM account a JOIN deviceusermap b WHERE a.name = b.searchKey AND b.device_userID = %s AND b.role = %s;
+  SELECT userEntity_userID FROM deviceusermap WHERE device_userID = %s AND role = %s AND userEntity_userID IS NOT NULL;
 """
 
 _queryadmin_sql = """

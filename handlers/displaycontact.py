@@ -43,10 +43,13 @@ class DispayContactHandler(BaseHandler):
     @tornado.gen.coroutine
     def post(self):
         coll      = self.application.db.users
-        data      = json.loads(self.request.body.decode("utf-8"))
-        userid    = data.get("id", "invalid")
-        contactid = data.get("contactid", "")
-        tp_userid = data.get("tp_userid", "")
+        
+        if not self._decoded_reqbody:
+            self._decoded_reqbody  = json.loads(self.request.body.decode("utf-8"))
+
+        userid    = self._decoded_reqbody.get("id", "invalid")
+        contactid = self._decoded_reqbody.get("contactid", "")
+        tp_userid = self._decoded_reqbody.get("tp_userid", "")
 
         #begin to logging user
         logging.info("%s begin to display %s" % (userid, contactid))
@@ -88,12 +91,9 @@ class DispayContactHandler(BaseHandler):
         userinfo["sign"] = res_body.get("sign", "")
         userinfo["name"] = res_body.get("name", "")
         userinfo["sex"] = res_body.get("sex", 0)
+        userinfo["organization"] = res_body.get("organization", "")
 
-        contact_info = yield coll.find_one({"id":contactid})
-        if contact_info:
-            tp_info = contact_info.get("tp_info", {})
-            if tp_info:
-                userinfo["tp_userid"] = tp_info.get("tp_userid", "")
+        userinfo["tp_userid"] = yield mickey.users.get_tpuserid_of_contact(contactid)
 
         if res_body.get("type", "") == "TERMINAL":
             admin_info = yield libcontact.get_admininfo(contactid)

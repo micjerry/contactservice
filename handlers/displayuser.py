@@ -14,12 +14,12 @@ class DispayUserHandler(BaseHandler):
     @tornado.gen.coroutine
     def post(self):
         coll      = self.application.db.users
-        data      = json.loads(self.request.body.decode("utf-8"))
-        userid    = data.get("id", "")
+        if not self._decoded_reqbody:
+            self._decoded_reqbody = json.loads(self.request.body.decode("utf-8"))
+        userid    = self._decoded_reqbody.get("id", "")
 
         #begin to logging user
         logging.info("%s begin to display" % (userid))
-
             
         #get remark
         remark = ""
@@ -29,7 +29,6 @@ class DispayUserHandler(BaseHandler):
 
         if result:
             userinfo["tp_info"] = result.get("tp_info", {})
- 
 
         self.write(userinfo)
 

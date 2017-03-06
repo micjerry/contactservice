@@ -65,13 +65,25 @@ class RmvContactHandler(BaseHandler):
                 self_notify = {
                  "name": "mx.contact.self_rmv_contact",
                  "userid": contactid,
-                 "pub_type": "any",
+                 "pub_type": "online",
                  "nty_type": "app"
                 }
 
                 publish.publish_one(userid, self_notify)
 
         if result:
+            if contactid in [x.get("id", "") for x in result.get("appendings", [])]:
+                if not contactid in [x.get("id", "") for x in result.get("contacts", [])]:
+                    #notify the user
+                    notify = {
+                     "name": "mx.contact.self_rmv_appendings",
+                     "userid": contactid,
+                     "pub_type": "online",
+                     "nty_type": "app"
+                    }
+
+                    publish.publish_one(userid, notify)
+
             self.set_status(200)
             
         else:
